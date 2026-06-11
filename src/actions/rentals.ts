@@ -1,0 +1,230 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { propertySchema, tenantSchema, rentPaymentSchema } from "@/lib/validations/rental";
+import type { ActionResultVoid } from "@/types";
+import { PaymentStatus } from "@prisma/client";
+
+async function requireAuth() {
+  const session = await auth();
+  if (!session) redirect("/login");
+  return session;
+}
+
+// ── Properties ────────────────────────────────────────────────
+
+export async function createProperty(data: unknown): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  const parsed = propertySchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Validation failed", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  await db.property.create({ data: parsed.data });
+
+  revalidatePath("/rentals");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function updateProperty(id: string, data: unknown): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  const parsed = propertySchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Validation failed", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  await db.property.update({ where: { id }, data: parsed.data });
+
+  revalidatePath("/rentals");
+  revalidatePath(`/rentals/${id}`);
+  return { success: true };
+}
+
+export async function deleteProperty(id: string): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  await db.property.delete({ where: { id } });
+
+  revalidatePath("/rentals");
+  revalidatePath("/");
+  return { success: true };
+}
+
+// ── Tenants ───────────────────────────────────────────────────
+
+export async function createTenant(propertyId: string, data: unknown): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  const parsed = tenantSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Validation failed", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const { email, alternatePhone, ...rest } = parsed.data;
+
+  await db.$transaction([
+    db.tenant.create({
+      data: {
+        ...rest,
+        email: email || null,
+        alternatePhone: alternatePhone || null,
+        propertyId,
+      },
+    }),
+    db.property.update({
+      where: { id: propertyId },
+      data: {
+        occupancyStatus: "OCCUPIED",
+        monthlyRent: parsed.data.rentAmount,
+      },
+    }),
+  ]);
+
+  revalidatePath("/rentals");
+  revalidatePath(`/rentals/${propertyId}`);
+  return { success: true };
+}
+
+export async function updateTenant(id: string, propertyId: string, data: unknown): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  const parsed = tenantSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Validation failed", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const { email, alternatePhone, ...rest } = parsed.data;
+
+  await db.tenant.update({
+    where: { id },
+    data: {
+      ...rest,
+      email: email || null,
+      alternatePhone: alternatePhone || null,
+    },
+  });
+
+  revalidatePath("/rentals");
+  revalidatePath(`/rentals/${propertyId}`);
+  return { success: true };
+}
+
+// ── Rent Payments ─────────────────────────────────────────────
+
+export async function markRentPaid(
+  paymentId: string,
+  data: { paidDate: Date; amount: number; paymentMethod?: string; notes?: string }
+): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  await db.rentPayment.update({
+    where: { id: paymentId },
+    data: {
+      status: PaymentStatus.PAID,
+      paidDate: data.paidDate,
+      amount: data.amount,
+      paymentMethod: data.paymentMethod ?? null,
+      notes: data.notes ?? null,
+    },
+  });
+
+  revalidatePath("/rentals");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function createRentPayment(
+  propertyId: string,
+  tenantId: string,
+  data: unknown
+): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  const parsed = rentPaymentSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Validation failed", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  await db.rentPayment.upsert({
+    where: {
+      propertyId_month_year: {
+        propertyId,
+        month: parsed.data.month,
+        year: parsed.data.year,
+      },
+    },
+    update: {
+      amount: parsed.data.amount,
+      dueDate: parsed.data.dueDate,
+      paidDate: parsed.data.paidDate ?? null,
+      paymentMethod: parsed.data.paymentMethod ?? null,
+      notes: parsed.data.notes ?? null,
+      status: parsed.data.paidDate ? PaymentStatus.PAID : PaymentStatus.PENDING,
+    },
+    create: {
+      propertyId,
+      tenantId,
+      amount: parsed.data.amount,
+      month: parsed.data.month,
+      year: parsed.data.year,
+      dueDate: parsed.data.dueDate,
+      paidDate: parsed.data.paidDate ?? null,
+      paymentMethod: parsed.data.paymentMethod ?? null,
+      notes: parsed.data.notes ?? null,
+      status: parsed.data.paidDate ? PaymentStatus.PAID : PaymentStatus.PENDING,
+    },
+  });
+
+  revalidatePath("/rentals");
+  revalidatePath(`/rentals/${propertyId}`);
+  return { success: true };
+}
+
+// ── Bulk — generate monthly payments ─────────────────────────
+
+export async function generateMonthlyRentPayments(
+  month: number,
+  year: number
+): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  const properties = await db.property.findMany({
+    where: { occupancyStatus: "OCCUPIED" },
+    include: { tenant: true },
+  });
+
+  for (const property of properties) {
+    if (!property.tenant) continue;
+
+    const dueDate = new Date(year, month - 1, property.tenant.dueDate);
+
+    await db.rentPayment.upsert({
+      where: {
+        propertyId_month_year: {
+          propertyId: property.id,
+          month,
+          year,
+        },
+      },
+      update: {},
+      create: {
+        propertyId: property.id,
+        tenantId: property.tenant.id,
+        amount: property.tenant.rentAmount,
+        month,
+        year,
+        dueDate,
+        status: PaymentStatus.PENDING,
+      },
+    });
+  }
+
+  revalidatePath("/rentals");
+  return { success: true };
+}

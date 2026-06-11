@@ -1,0 +1,653 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENUMERATIONS
+// ═══════════════════════════════════════════════════════════════
+
+enum PropertyType {
+  SHOP
+  APARTMENT_1BHK
+  APARTMENT_2BHK
+  APARTMENT_3BHK
+  HOUSE
+  OTHER
+}
+
+enum OccupancyStatus {
+  OCCUPIED
+  VACANT
+  MAINTENANCE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIAL
+}
+
+enum BillCategory {
+  BESCOM
+  BWSSB
+  GAIL
+  HDFC_CREDIT_CARD
+  ICICI_CREDIT_CARD
+  INTERNET
+  MOBILE
+  PROPERTY_TAX
+  MAINTENANCE
+  OTHER
+}
+
+enum BillStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NoteCategory {
+  PERSONAL
+  PROPERTY
+  FINANCE
+  FAMILY
+  MISCELLANEOUS
+}
+
+enum IdeaStatus {
+  IDEA
+  RESEARCHING
+  PLANNING
+  BUILDING
+  LAUNCHED
+  DROPPED
+}
+
+enum IdeaPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ProjectStatus {
+  PLANNING
+  DEVELOPMENT
+  TESTING
+  LIVE
+  ON_HOLD
+  CANCELLED
+}
+
+enum DocumentCategory {
+  PROPERTY
+  INSURANCE
+  PERSONAL
+  FINANCIAL
+  VEHICLE
+  OTHER
+}
+
+enum IncomeCategory {
+  SALARY
+  RENT_INCOME
+  FREELANCE
+  INVESTMENT
+  OTHER
+}
+
+enum ExpenseCategory {
+  UTILITIES
+  CREDIT_CARDS
+  PROPERTY_EXPENSES
+  GROCERIES
+  TRANSPORT
+  HEALTHCARE
+  ENTERTAINMENT
+  MISCELLANEOUS
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+enum GoalCategory {
+  HEALTH
+  FINANCE
+  LEARNING
+  CAREER
+  PERSONAL
+  PROPERTY
+}
+
+enum ReminderStatus {
+  ACTIVE
+  COMPLETED
+  SNOOZED
+  DISMISSED
+}
+
+enum ReminderCategory {
+  RENT_FOLLOWUP
+  BILL_REMINDER
+  INSURANCE_RENEWAL
+  VEHICLE_RENEWAL
+  MAINTENANCE
+  PERSONAL
+  OTHER
+}
+
+enum RecurrenceType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum CaptureStatus {
+  INBOX
+  ARCHIVED
+  CONVERTED_TO_TASK
+  CONVERTED_TO_IDEA
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH MODELS (Auth.js / NextAuth)
+// ═══════════════════════════════════════════════════════════════
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 1: RENTAL MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+
+model Property {
+  id              String          @id @default(cuid())
+  name            String
+  type            PropertyType
+  address         String
+  floor           String?
+  area            Float?
+  occupancyStatus OccupancyStatus @default(VACANT)
+  monthlyRent     Decimal         @db.Decimal(10, 2)
+  securityDeposit Decimal?        @db.Decimal(10, 2)
+  description     String?         @db.Text
+  images          String[]
+  amenities       String[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  tenant       Tenant?
+  rentPayments RentPayment[]
+  documents    Document[]
+  reminders    Reminder[]
+
+  @@index([occupancyStatus])
+}
+
+model Tenant {
+  id              String    @id @default(cuid())
+  name            String
+  email           String?
+  phone           String
+  alternatePhone  String?
+  propertyId      String    @unique
+  leaseStartDate  DateTime
+  leaseEndDate    DateTime?
+  rentAmount      Decimal   @db.Decimal(10, 2)
+  securityDeposit Decimal?  @db.Decimal(10, 2)
+  dueDate         Int       @default(1)
+  notes           String?   @db.Text
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  property     Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  rentPayments RentPayment[]
+
+  @@index([propertyId])
+  @@index([isActive])
+}
+
+model RentPayment {
+  id            String        @id @default(cuid())
+  propertyId    String
+  tenantId      String
+  amount        Decimal       @db.Decimal(10, 2)
+  month         Int
+  year          Int
+  dueDate       DateTime
+  paidDate      DateTime?
+  status        PaymentStatus @default(PENDING)
+  paymentMethod String?
+  notes         String?       @db.Text
+  receiptUrl    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, month, year])
+  @@index([propertyId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([month, year])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 2: BILL MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+
+model Bill {
+  id           String         @id @default(cuid())
+  name         String
+  category     BillCategory
+  amount       Decimal?       @db.Decimal(10, 2)
+  dueDate      DateTime
+  paidDate     DateTime?
+  paidAmount   Decimal?       @db.Decimal(10, 2)
+  status       BillStatus     @default(PENDING)
+  isRecurring  Boolean        @default(false)
+  recurrence   RecurrenceType @default(NONE)
+  accountLast4 String?
+  notes        String?        @db.Text
+  propertyId   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([dueDate])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 3: TASK MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?      @db.Text
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  completedAt DateTime?
+  tags        String[]
+  category    String?
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([category])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 4: QUICK CAPTURE
+// ═══════════════════════════════════════════════════════════════
+
+model QuickCapture {
+  id          String        @id @default(cuid())
+  content     String        @db.Text
+  status      CaptureStatus @default(INBOX)
+  convertedTo String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 5: NOTES
+// ═══════════════════════════════════════════════════════════════
+
+model Note {
+  id         String       @id @default(cuid())
+  title      String
+  content    String?      @db.Text
+  category   NoteCategory @default(PERSONAL)
+  tags       String[]
+  isPinned   Boolean      @default(false)
+  isArchived Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([category])
+  @@index([isPinned])
+  @@index([isArchived])
+  @@index([updatedAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 6: IDEAS VAULT
+// ═══════════════════════════════════════════════════════════════
+
+model Idea {
+  id          String       @id @default(cuid())
+  title       String
+  description String?      @db.Text
+  status      IdeaStatus   @default(IDEA)
+  priority    IdeaPriority @default(MEDIUM)
+  category    String?
+  tags        String[]
+  rating      Int          @default(0)
+  notes       String?      @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 7: HABIT TRACKER
+// ═══════════════════════════════════════════════════════════════
+
+model Habit {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  icon        String?
+  color       String   @default("#6366f1")
+  targetDays  Int      @default(7)
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entries HabitEntry[]
+
+  @@index([isActive])
+}
+
+model HabitEntry {
+  id        String   @id @default(cuid())
+  habitId   String
+  date      DateTime @db.Date
+  completed Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([habitId])
+  @@index([date])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 8: PROJECT TRACKER
+// ═══════════════════════════════════════════════════════════════
+
+model Project {
+  id                String        @id @default(cuid())
+  name              String
+  description       String?       @db.Text
+  status            ProjectStatus @default(PLANNING)
+  category          String?
+  startDate         DateTime?
+  targetDate        DateTime?
+  completedAt       DateTime?
+  completionPercent Int           @default(0)
+  color             String        @default("#6366f1")
+  tags              String[]
+  notes             String?       @db.Text
+  repoUrl           String?
+  liveUrl           String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  milestones Milestone[]
+
+  @@index([status])
+  @@index([category])
+}
+
+model Milestone {
+  id          String    @id @default(cuid())
+  projectId   String
+  title       String
+  description String?   @db.Text
+  dueDate     DateTime?
+  completedAt DateTime?
+  isCompleted Boolean   @default(false)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 9: DOCUMENT VAULT
+// ═══════════════════════════════════════════════════════════════
+
+model Document {
+  id           String           @id @default(cuid())
+  name         String
+  originalName String
+  category     DocumentCategory
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  tags         String[]
+  description  String?          @db.Text
+  propertyId   String?
+  expiryDate   DateTime?
+  version      Int              @default(1)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  property Property? @relation(fields: [propertyId], references: [id])
+
+  @@index([category])
+  @@index([propertyId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 10: PERSONAL FINANCE
+// ═══════════════════════════════════════════════════════════════
+
+model Income {
+  id          String         @id @default(cuid())
+  title       String
+  amount      Decimal        @db.Decimal(10, 2)
+  category    IncomeCategory
+  date        DateTime
+  description String?        @db.Text
+  isRecurring Boolean        @default(false)
+  recurrence  RecurrenceType @default(NONE)
+  propertyId  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([category])
+  @@index([date])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  title       String
+  amount      Decimal         @db.Decimal(10, 2)
+  category    ExpenseCategory
+  date        DateTime
+  description String?         @db.Text
+  isRecurring Boolean         @default(false)
+  recurrence  RecurrenceType  @default(NONE)
+  billId      String?
+  propertyId  String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([category])
+  @@index([date])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 11: GOALS
+// ═══════════════════════════════════════════════════════════════
+
+model Goal {
+  id                String       @id @default(cuid())
+  title             String
+  description       String?      @db.Text
+  category          GoalCategory @default(PERSONAL)
+  status            GoalStatus   @default(ACTIVE)
+  targetValue       Decimal?     @db.Decimal(10, 2)
+  currentValue      Decimal      @default(0) @db.Decimal(10, 2)
+  unit              String?
+  startDate         DateTime?
+  targetDate        DateTime?
+  completedAt       DateTime?
+  completionPercent Int          @default(0)
+  notes             String?      @db.Text
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  milestones GoalMilestone[]
+
+  @@index([status])
+  @@index([category])
+}
+
+model GoalMilestone {
+  id          String    @id @default(cuid())
+  goalId      String
+  title       String
+  targetValue Decimal?  @db.Decimal(10, 2)
+  completedAt DateTime?
+  isCompleted Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 12: REMINDERS & FOLLOW-UPS
+// ═══════════════════════════════════════════════════════════════
+
+model Reminder {
+  id           String           @id @default(cuid())
+  title        String
+  description  String?          @db.Text
+  category     ReminderCategory
+  status       ReminderStatus   @default(ACTIVE)
+  dueDate      DateTime
+  reminderDate DateTime?
+  isRecurring  Boolean          @default(false)
+  recurrence   RecurrenceType   @default(NONE)
+  propertyId   String?
+  notes        String?          @db.Text
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  property Property? @relation(fields: [propertyId], references: [id])
+
+  @@index([status])
+  @@index([category])
+  @@index([dueDate])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════════
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  entityTitle String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType])
+  @@index([createdAt])
+}
