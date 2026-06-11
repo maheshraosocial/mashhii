@@ -51,7 +51,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     db.rentPayment.findMany({
       where: { month, year },
-      include: { property: { select: { type: true } } },
+      include: { property: { select: { type: true, name: true } } },
     }),
     db.bill.findMany({
       where: { status: { in: ["PENDING", "OVERDUE"] } },
