@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { signOut } from "next-auth/react";
-import { LogOut, User, Palette, Database } from "lucide-react";
+import { LogOut, User, Palette, Database, Monitor, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
@@ -56,17 +55,30 @@ export function SettingsClient({ user }: SettingsClientProps) {
           </CardTitle>
           <CardDescription>Customize the look and feel of your dashboard</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="darkMode">Dark Mode</Label>
-              <p className="text-xs text-muted-foreground">Switch between light and dark themes</p>
-            </div>
-            <Switch
-              id="darkMode"
-              checked={theme === "dark"}
-              onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-            />
+        <CardContent>
+          <Label className="mb-3 block">Theme</Label>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { id: "system", label: "System",  Icon: Monitor, desc: "Match OS setting" },
+              { id: "light",  label: "Light",   Icon: Sun,     desc: "Always light"     },
+              { id: "dark",   label: "Dark",    Icon: Moon,    desc: "Always dark"      },
+            ] as const).map(({ id, label, Icon, desc }) => (
+              <button
+                key={id}
+                onClick={() => setTheme(id)}
+                className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all focus:outline-none ${
+                  theme === id
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-muted-foreground/40 hover:bg-accent"
+                }`}
+              >
+                <Icon className={`h-6 w-6 ${theme === id ? "text-primary" : "text-muted-foreground"}`} />
+                <div className="text-center">
+                  <p className={`text-sm font-medium ${theme === id ? "text-primary" : ""}`}>{label}</p>
+                  <p className="text-[11px] text-muted-foreground">{desc}</p>
+                </div>
+              </button>
+            ))}
           </div>
         </CardContent>
       </Card>

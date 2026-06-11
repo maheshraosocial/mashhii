@@ -22,7 +22,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { markRentPaid, createProperty, updateProperty, deleteProperty } from "@/actions/rentals";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import type { Property, Tenant, RentPayment, PropertyType } from "@/types";
+import type { Property, Tenant, RentPayment, PropertyType, OccupancyStatus } from "@/types";
 import { PROPERTY_TYPE_LABELS } from "@/lib/constants";
 
 interface PropertyWithData extends Property {
@@ -60,7 +60,7 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
     monthlyRent: "",
   });
 
-  const [editProperty, setEditProperty] = useState<{ id: string; name: string; address: string; monthlyRent: string; type: PropertyType } | null>(null);
+  const [editProperty, setEditProperty] = useState<{ id: string; name: string; address: string; monthlyRent: string; type: PropertyType; occupancyStatus: OccupancyStatus; securityDeposit: string } | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleMarkPaid = async () => {
@@ -91,7 +91,8 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
       address: editProperty.address,
       monthlyRent: parseFloat(editProperty.monthlyRent),
       type: editProperty.type,
-      occupancyStatus: "VACANT",
+      occupancyStatus: editProperty.occupancyStatus,
+      securityDeposit: editProperty.securityDeposit ? parseFloat(editProperty.securityDeposit) : undefined,
     });
     setIsSubmitting(false);
     if (result.success) {
@@ -193,7 +194,7 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
                               View Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setEditProperty({ id: property.id, name: property.name, address: property.address, monthlyRent: property.monthlyRent.toString(), type: property.type as PropertyType })}>
+                          <DropdownMenuItem onClick={() => setEditProperty({ id: property.id, name: property.name, address: property.address, monthlyRent: property.monthlyRent.toString(), type: property.type as PropertyType, occupancyStatus: property.occupancyStatus as OccupancyStatus, securityDeposit: property.securityDeposit?.toString() ?? "" })}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
@@ -395,6 +396,20 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
               </Select>
             </div>
             <div>
+              <Label>Occupancy Status</Label>
+              <Select
+                value={editProperty?.occupancyStatus ?? "VACANT"}
+                onValueChange={(v) => setEditProperty((p) => p ? { ...p, occupancyStatus: v as OccupancyStatus } : p)}
+              >
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OCCUPIED">Occupied</SelectItem>
+                  <SelectItem value="VACANT">Vacant</SelectItem>
+                  <SelectItem value="MAINTENANCE">Under Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Address *</Label>
               <Input
                 value={editProperty?.address ?? ""}
@@ -402,14 +417,26 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
                 className="mt-1.5"
               />
             </div>
-            <div>
-              <Label>Monthly Rent (₹) *</Label>
-              <Input
-                type="number"
-                value={editProperty?.monthlyRent ?? ""}
-                onChange={(e) => setEditProperty((p) => p ? { ...p, monthlyRent: e.target.value } : p)}
-                className="mt-1.5"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Monthly Rent (₹) *</Label>
+                <Input
+                  type="number"
+                  value={editProperty?.monthlyRent ?? ""}
+                  onChange={(e) => setEditProperty((p) => p ? { ...p, monthlyRent: e.target.value } : p)}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Security Deposit (₹)</Label>
+                <Input
+                  type="number"
+                  value={editProperty?.securityDeposit ?? ""}
+                  onChange={(e) => setEditProperty((p) => p ? { ...p, securityDeposit: e.target.value } : p)}
+                  className="mt-1.5"
+                  placeholder="Optional"
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

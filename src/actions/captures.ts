@@ -30,6 +30,7 @@ export async function archiveCapture(id: string): Promise<ActionResultVoid> {
   await requireAuth();
   await db.quickCapture.update({ where: { id }, data: { status: CaptureStatus.ARCHIVED } });
   revalidatePath("/tasks");
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -46,6 +47,7 @@ export async function convertCaptureToTask(id: string, content: string): Promise
   });
 
   revalidatePath("/tasks");
+  revalidatePath("/");
   return { success: true };
 }
 

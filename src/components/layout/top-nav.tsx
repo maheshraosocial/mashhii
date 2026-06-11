@@ -4,6 +4,7 @@ import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
+import { useState, useEffect } from "react";
 import {
   Menu,
   Search,
@@ -11,7 +12,6 @@ import {
   Moon,
   LogOut,
   Settings,
-  User,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,41 +33,52 @@ interface TopNavProps {
   onSearchOpen?: () => void;
 }
 
+// Matches cuid / uuid-like dynamic segments
+const isId = (s: string) => /^[a-z0-9]{20,}$/i.test(s) || /^[0-9a-f-]{36}$/.test(s);
+
 function Breadcrumb() {
   const pathname = usePathname();
   const parts = pathname.split("/").filter(Boolean);
+  const [lastLabel, setLastLabel] = useState<string | null>(null);
+
+  // When navigating to a detail page (e.g. /rentals/abc123), read the
+  // page title from document.title which Next.js populates from metadata.
+  useEffect(() => {
+    const lastPart = parts[parts.length - 1];
+    if (lastPart && isId(lastPart)) {
+      // document.title is set by Next.js metadata, e.g. "Ground Floor 2BHK | Mashhii"
+      const title = document.title.replace(/\s*\|\s*Mashhii$/i, "").trim();
+      setLastLabel(title || null);
+    } else {
+      setLastLabel(null);
+    }
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const crumbs = [
     { label: "Mashhii", href: "/" },
     ...parts.map((part, i) => {
       const navItem = NAV_ITEMS.find((n) => n.href === `/${part}`);
+      const isLast = i === parts.length - 1;
       return {
-        label: navItem?.label ?? part.charAt(0).toUpperCase() + part.slice(1),
+        label: navItem?.label ?? (isLast && isId(part) && lastLabel ? lastLabel : part.charAt(0).toUpperCase() + part.slice(1)),
         href: `/${parts.slice(0, i + 1).join("/")}`,
       };
     }),
   ];
 
   if (crumbs.length <= 1) {
-    return (
-      <span className="text-sm text-muted-foreground">Dashboard</span>
-    );
+    return <span className="text-sm text-muted-foreground">Dashboard</span>;
   }
 
   return (
     <nav className="flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
       {crumbs.map((crumb, i) => (
         <span key={crumb.href} className="flex items-center gap-1.5">
-          {i > 0 && (
-            <span className="text-muted-foreground/50">/</span>
-          )}
+          {i > 0 && <span className="text-muted-foreground/50">/</span>}
           {i === crumbs.length - 1 ? (
             <span className="text-foreground font-medium">{crumb.label}</span>
           ) : (
-            <Link
-              href={crumb.href as Route}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <Link href={crumb.href as Route} className="text-muted-foreground hover:text-foreground transition-colors">
               {crumb.label}
             </Link>
           )}
@@ -80,6 +91,13 @@ function Breadcrumb() {
 export function TopNav({ onSearchOpen }: TopNavProps) {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Auto-close mobile sidebar on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const user = session?.user;
   const userInitials = user?.name ? initials(user.name) : "M";
@@ -87,7 +105,7 @@ export function TopNav({ onSearchOpen }: TopNavProps) {
   return (
     <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm flex items-center px-4 gap-3 sticky top-0 z-40">
       {/* Mobile menu */}
-      <Sheet>
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="md:hidden">
             <Menu className="h-4 w-4" />
@@ -106,7 +124,6 @@ export function TopNav({ onSearchOpen }: TopNavProps) {
 
       {/* Right actions */}
       <div className="flex items-center gap-1">
-        {/* Search button */}
         <Button
           variant="ghost"
           size="sm"
@@ -131,7 +148,6 @@ export function TopNav({ onSearchOpen }: TopNavProps) {
           <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
         </Button>
 
-        {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="rounded-full ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
@@ -145,9 +161,7 @@ export function TopNav({ onSearchOpen }: TopNavProps) {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{user?.name}</p>
-                <p className="text-xs leading-none text-muted-foreground truncate">
-                  {user?.email}
-                </p>
+                <p className="text-xs leading-none text-muted-foreground truncate">{user?.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -168,6 +182,7 @@ export function TopNav({ onSearchOpen }: TopNavProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
     </header>
   );
 }

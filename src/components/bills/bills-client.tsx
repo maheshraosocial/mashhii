@@ -33,7 +33,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", category: "OTHER" as BillCategory, amount: "", dueDate: "", isRecurring: false, notes: "" });
-  const [editBill, setEditBill] = useState<{ id: string; name: string; category: BillCategory; amount: string; dueDate: string; isRecurring: boolean; notes: string } | null>(null);
+  const [editBill, setEditBill] = useState<{ id: string; name: string; category: BillCategory; amount: string; dueDate: string; isRecurring: boolean; notes: string; status: BillStatus } | null>(null);
 
   const handleAdd = async () => {
     if (!form.name || !form.dueDate) { toast.error("Name and due date are required"); return; }
@@ -70,8 +70,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
       category: editBill.category,
       amount: editBill.amount ? parseFloat(editBill.amount) : undefined,
       dueDate: new Date(editBill.dueDate),
-      isRecurring: editBill.isRecurring,
-      notes: editBill.notes || undefined,
+      isRecurring: editBill.isRecurring,      status: editBill.status,      notes: editBill.notes || undefined,
     });
     setIsSubmitting(false);
     if (result.success) { toast.success("Bill updated"); setEditBill(null); }
@@ -129,7 +128,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditBill({ id: bill.id, name: bill.name, category: bill.category as BillCategory, amount: bill.amount ? bill.amount.toString() : "", dueDate: new Date(bill.dueDate).toISOString().split("T")[0], isRecurring: bill.isRecurring, notes: bill.notes ?? "" })}>Edit</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setEditBill({ id: bill.id, name: bill.name, category: bill.category as BillCategory, amount: bill.amount ? bill.amount.toString() : "", dueDate: new Date(bill.dueDate).toISOString().split("T")[0], isRecurring: bill.isRecurring, notes: bill.notes ?? "", status: bill.status as BillStatus })}>Edit</DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(bill.id)}>Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -205,13 +204,41 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Amount (₹)</Label>
-              <Input type="number" value={editBill?.amount ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, amount: e.target.value } : p)} className="mt-1.5" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Amount (₹)</Label>
+                <Input type="number" value={editBill?.amount ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, amount: e.target.value } : p)} className="mt-1.5" />
+              </div>
+              <div>
+                <Label>Due Date *</Label>
+                <Input type="date" value={editBill?.dueDate ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, dueDate: e.target.value } : p)} className="mt-1.5" />
+              </div>
             </div>
             <div>
-              <Label>Due Date *</Label>
-              <Input type="date" value={editBill?.dueDate ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, dueDate: e.target.value } : p)} className="mt-1.5" />
+              <Label>Status</Label>
+              <Select value={editBill?.status ?? "PENDING"} onValueChange={(v) => setEditBill((p) => p ? { ...p, status: v as BillStatus } : p)}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="OVERDUE">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Monthly Recurring</p>
+                <p className="text-xs text-muted-foreground">Repeats every month automatically</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={editBill?.isRecurring ?? false}
+                onClick={() => setEditBill((p) => p ? { ...p, isRecurring: !p.isRecurring } : p)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${editBill?.isRecurring ? "bg-primary" : "bg-input"}`}
+              >
+                <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${editBill?.isRecurring ? "translate-x-4" : "translate-x-0"}`} />
+              </button>
             </div>
             <div>
               <Label>Notes</Label>

@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StatsCard } from "@/components/shared/stats-card";
+import { InboxWidget } from "@/components/dashboard/inbox-widget";
 import { formatCurrency, formatDate, getMonthYear, safeDecimalToNumber } from "@/lib/utils";
 import { Metadata } from "next";
 
@@ -408,23 +409,17 @@ export default async function DashboardPage() {
           )}
 
           {/* Quick captures */}
-          {recentCaptures.length > 0 && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Inbox</CardTitle>
-                <Link href="/tasks?tab=captures" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-                  View all <ArrowRight className="h-3 w-3" />
-                </Link>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {recentCaptures.map((capture) => (
-                  <p key={capture.id} className="text-sm text-foreground border-b border-border pb-2 last:border-0">
-                    {capture.content}
-                  </p>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Inbox {recentCaptures.length > 0 && <span className="text-xs font-normal text-muted-foreground ml-1">({recentCaptures.length})</span>}</CardTitle>
+              <Link href="/capture" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <InboxWidget captures={recentCaptures} />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
