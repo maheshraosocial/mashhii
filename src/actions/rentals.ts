@@ -24,7 +24,12 @@ export async function createProperty(data: unknown): Promise<ActionResultVoid> {
     return { success: false, error: "Validation failed", fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  await db.property.create({ data: parsed.data });
+  try {
+    await db.property.create({ data: parsed.data });
+  } catch (e) {
+    console.error("createProperty error:", e);
+    return { success: false, error: "Failed to save property. Please try again." };
+  }
 
   revalidatePath("/rentals");
   revalidatePath("/");
@@ -39,7 +44,12 @@ export async function updateProperty(id: string, data: unknown): Promise<ActionR
     return { success: false, error: "Validation failed", fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  await db.property.update({ where: { id }, data: parsed.data });
+  try {
+    await db.property.update({ where: { id }, data: parsed.data });
+  } catch (e) {
+    console.error("updateProperty error:", e);
+    return { success: false, error: "Failed to update property. Please try again." };
+  }
 
   revalidatePath("/rentals");
   revalidatePath(`/rentals/${id}`);
@@ -118,9 +128,9 @@ export async function updateTenant(id: string, propertyId: string, data: unknown
 // ── Rent Payments ─────────────────────────────────────────────
 
 /**
- * Ensure every non-OTHER property has a RentPayment record for the current
- * month. Works whether or not a Tenant record exists — uses monthlyRent from
- * the Property itself as the source of truth.
+ * Ensure every property (including OTHER) has a RentPayment record for the
+ * current month. OTHER properties are included for payment tracking but excluded
+ * from financial stats/calculations.
  */
 export async function ensureCurrentMonthPayments(): Promise<void> {
   const now = new Date();
@@ -128,7 +138,6 @@ export async function ensureCurrentMonthPayments(): Promise<void> {
   const year = now.getFullYear();
 
   const properties = await db.property.findMany({
-    where: { type: { not: "OTHER" } },
     include: { tenant: true },
   });
 

@@ -249,6 +249,7 @@ model Property {
   monthlyRent     Decimal         @db.Decimal(10, 2)
   securityDeposit Decimal?        @db.Decimal(10, 2)
   description     String?         @db.Text
+  notes           String?         @db.Text
   images          String[]
   amenities       String[]
   createdAt       DateTime        @default(now())

@@ -31,7 +31,7 @@ export default async function RentalsPage() {
     orderBy: { createdAt: "asc" },
   });
 
-  // Exclude "OTHER" type from all stats and the displayed list
+  // Exclude "OTHER" type from financial stats only — all properties are displayed
   const billableProperties = properties.filter((p) => p.type !== "OTHER");
 
   const totalExpectedRent = billableProperties.reduce((sum, p) => {
@@ -58,7 +58,7 @@ export default async function RentalsPage() {
         iconColor="text-blue-400"
       />
       <RentalsClient
-        properties={billableProperties as never}
+        properties={properties as never}
         stats={{
           totalExpected: totalExpectedRent,
           collected: collectedRent,

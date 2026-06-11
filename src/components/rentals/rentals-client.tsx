@@ -102,20 +102,25 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
       return;
     }
     setIsSubmitting(true);
-    const result = await createProperty({
-      name: newProperty.name,
-      type: newProperty.type,
-      monthlyRent: parseFloat(newProperty.monthlyRent),
-      notes: newProperty.notes || null,
-      occupancyStatus: "OCCUPIED",
-    });
-    setIsSubmitting(false);
-    if (result.success) {
-      toast.success("Property added");
-      setAddDialog(false);
-      setNewProperty({ name: "", type: "APARTMENT_2BHK", monthlyRent: "", notes: "" });
-    } else {
-      toast.error(result.error);
+    try {
+      const result = await createProperty({
+        name: newProperty.name,
+        type: newProperty.type,
+        monthlyRent: parseFloat(newProperty.monthlyRent),
+        notes: newProperty.notes || null,
+        occupancyStatus: "OCCUPIED",
+      });
+      if (result.success) {
+        toast.success("Property added");
+        setAddDialog(false);
+        setNewProperty({ name: "", type: "APARTMENT_2BHK", monthlyRent: "", notes: "" });
+      } else {
+        toast.error(result.error ?? "Failed to add property");
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -127,16 +132,25 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
       return;
     }
     setIsSubmitting(true);
-    const result = await updateProperty(editProperty.id, {
-      name: editProperty.name,
-      type: editProperty.type,
-      monthlyRent: parseFloat(editProperty.monthlyRent),
-      notes: editProperty.notes || null,
-      occupancyStatus: "OCCUPIED",
-    });
-    setIsSubmitting(false);
-    if (result.success) { toast.success("Property updated"); setEditProperty(null); }
-    else toast.error(result.error);
+    try {
+      const result = await updateProperty(editProperty.id, {
+        name: editProperty.name,
+        type: editProperty.type,
+        monthlyRent: parseFloat(editProperty.monthlyRent),
+        notes: editProperty.notes || null,
+        occupancyStatus: "OCCUPIED",
+      });
+      if (result.success) {
+        toast.success("Property updated");
+        setEditProperty(null);
+      } else {
+        toast.error(result.error ?? "Failed to update property");
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   /* ── Delete Property ──────────────────────────────────────────── */
@@ -342,11 +356,9 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
               >
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(PROPERTY_TYPE_LABELS)
-                    .filter(([value]) => value !== "OTHER")
-                    .map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
+                  {Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -404,11 +416,9 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
               >
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(PROPERTY_TYPE_LABELS)
-                    .filter(([value]) => value !== "OTHER")
-                    .map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
+                  {Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
