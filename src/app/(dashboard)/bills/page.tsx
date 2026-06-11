@@ -16,13 +16,21 @@ export default async function BillsPage() {
     orderBy: [{ status: "asc" }, { dueDate: "asc" }],
   });
 
+  const pendingBills = bills.filter((b) => b.status === "PENDING");
+  const overdueBills = bills.filter((b) => b.status === "OVERDUE");
+  const paidBills    = bills.filter((b) => b.status === "PAID");
+
+  const totalPending = pendingBills.reduce((s, b) => s + (b.amount ? parseFloat(b.amount.toString()) : 0), 0);
+  const totalOverdue = overdueBills.reduce((s, b) => s + (b.amount ? parseFloat(b.amount.toString()) : 0), 0);
+  const totalPaid    = paidBills.reduce((s, b) => s + (b.amount ? parseFloat(b.amount.toString()) : 0), 0);
+
   const stats = {
-    pending: bills.filter((b) => b.status === "PENDING").length,
-    overdue: bills.filter((b) => b.status === "OVERDUE").length,
-    paid: bills.filter((b) => b.status === "PAID").length,
-    totalPending: bills
-      .filter((b) => b.status !== "PAID" && b.amount)
-      .reduce((sum, b) => sum + parseFloat(b.amount!.toString()), 0),
+    pending:      pendingBills.length,
+    overdue:      overdueBills.length,
+    paid:         paidBills.length,
+    totalPending,
+    totalOverdue,
+    totalPaid,
   };
 
   return (

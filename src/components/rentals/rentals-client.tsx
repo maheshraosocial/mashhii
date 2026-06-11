@@ -471,25 +471,3 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
   );
 }
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StatsCard } from "@/components/shared/stats-card";
-import { EmptyState } from "@/components/shared/empty-state";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { markRentPaid, updatePaymentStatus, createProperty, updateProperty, deleteProperty } from "@/actions/rentals";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import type { Property, Tenant, RentPayment, PropertyType, OccupancyStatus } from "@/types";
-import { PROPERTY_TYPE_LABELS } from "@/lib/constants";
-

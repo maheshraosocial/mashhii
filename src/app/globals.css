@@ -136,6 +136,99 @@
   --sidebar-accent: 172 66% 45%;
 }
 
+/* ── Background Themes (data-bg) ─────────────────────────────── */
+/* Subtle hue shifts on bg/card/sidebar, like Linear / Notion     */
+
+/* ── Slate ── */
+[data-bg="slate"] {
+  --background: 220 14% 96%;
+  --card: 220 14% 98%;
+  --sidebar-background: 220 14% 92%;
+  --border: 220 13% 88%;
+  --input: 220 13% 88%;
+  --muted: 220 13% 92%;
+}
+.dark[data-bg="slate"] {
+  --background: 222 18% 8%;
+  --card: 222 18% 11%;
+  --sidebar-background: 222 18% 6%;
+  --border: 222 16% 15%;
+  --input: 222 16% 15%;
+  --muted: 222 16% 14%;
+}
+
+/* ── Blue ── */
+[data-bg="blue"] {
+  --background: 214 40% 96%;
+  --card: 214 40% 98%;
+  --sidebar-background: 214 40% 92%;
+  --border: 214 32% 88%;
+  --input: 214 32% 88%;
+  --muted: 214 32% 92%;
+}
+.dark[data-bg="blue"] {
+  --background: 222 40% 7%;
+  --card: 222 40% 10%;
+  --sidebar-background: 222 40% 5%;
+  --border: 222 32% 14%;
+  --input: 222 32% 14%;
+  --muted: 222 32% 13%;
+}
+
+/* ── Green ── */
+[data-bg="green"] {
+  --background: 138 20% 96%;
+  --card: 138 20% 98%;
+  --sidebar-background: 138 20% 92%;
+  --border: 138 16% 88%;
+  --input: 138 16% 88%;
+  --muted: 138 16% 92%;
+}
+.dark[data-bg="green"] {
+  --background: 150 20% 7%;
+  --card: 150 20% 10%;
+  --sidebar-background: 150 20% 5%;
+  --border: 150 16% 14%;
+  --input: 150 16% 14%;
+  --muted: 150 16% 13%;
+}
+
+/* ── Purple ── */
+[data-bg="purple-bg"] {
+  --background: 270 20% 97%;
+  --card: 270 20% 99%;
+  --sidebar-background: 270 20% 93%;
+  --border: 270 16% 89%;
+  --input: 270 16% 89%;
+  --muted: 270 16% 93%;
+}
+.dark[data-bg="purple-bg"] {
+  --background: 265 20% 7%;
+  --card: 265 20% 10%;
+  --sidebar-background: 265 20% 5%;
+  --border: 265 16% 14%;
+  --input: 265 16% 14%;
+  --muted: 265 16% 13%;
+}
+
+/* ── Amber ── */
+[data-bg="amber-bg"] {
+  --background: 40 30% 97%;
+  --card: 40 30% 99%;
+  --sidebar-background: 40 30% 93%;
+  --border: 40 24% 89%;
+  --input: 40 24% 89%;
+  --muted: 40 24% 93%;
+}
+.dark[data-bg="amber-bg"] {
+  --background: 35 20% 7%;
+  --card: 35 20% 10%;
+  --sidebar-background: 35 20% 5%;
+  --border: 35 16% 14%;
+  --input: 35 16% 14%;
+  --muted: 35 16% 13%;
+}
+
 /* ── Base Styles ────────────────────────────────────────────── */
 @layer base {
   * {

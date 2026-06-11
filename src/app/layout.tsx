@@ -39,9 +39,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* Restore accent color before first paint to avoid flash */}
+      {/* Restore accent color + background theme before first paint to avoid flash */}
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `try{var c=localStorage.getItem('mashhii-accent');if(c&&c!=='purple')document.documentElement.setAttribute('data-color',c);}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{var c=localStorage.getItem('mashhii-accent');if(c&&c!=='purple')document.documentElement.setAttribute('data-color',c);var bg=localStorage.getItem('mashhii-bg');if(bg&&bg!=='default')document.documentElement.setAttribute('data-bg',bg);}catch(e){}` }} />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider

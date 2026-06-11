@@ -25,7 +25,7 @@ import type { Bill, BillStatus, BillCategory } from "@/types";
 
 interface BillsClientProps {
   bills: Bill[];
-  stats: { pending: number; overdue: number; paid: number; totalPending: number };
+  stats: { pending: number; overdue: number; paid: number; totalPending: number; totalOverdue: number; totalPaid: number };
 }
 
 export function BillsClient({ bills, stats }: BillsClientProps) {
@@ -80,10 +80,34 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
   return (
     <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Pending" value={stats.pending.toString()} icon={Clock} iconColor="text-yellow-400" />
-        <StatsCard title="Overdue" value={stats.overdue.toString()} icon={AlertCircle} iconColor="text-red-400" />
-        <StatsCard title="Paid" value={stats.paid.toString()} icon={CheckCircle2} iconColor="text-green-400" />
-        <StatsCard title="Total Pending" value={formatCurrency(stats.totalPending)} icon={AlertCircle} iconColor="text-orange-400" />
+        <StatsCard
+          title="Pending"
+          value={`${stats.pending} ${stats.pending === 1 ? "Bill" : "Bills"}`}
+          subtitle={stats.totalPending > 0 ? `${formatCurrency(stats.totalPending)} due` : "Nothing due"}
+          icon={Clock}
+          iconColor="text-yellow-400"
+        />
+        <StatsCard
+          title="Overdue"
+          value={`${stats.overdue} ${stats.overdue === 1 ? "Bill" : "Bills"}`}
+          subtitle={stats.totalOverdue > 0 ? `${formatCurrency(stats.totalOverdue)} overdue` : "All on track"}
+          icon={AlertCircle}
+          iconColor="text-red-400"
+        />
+        <StatsCard
+          title="Paid"
+          value={`${stats.paid} ${stats.paid === 1 ? "Bill" : "Bills"}`}
+          subtitle={stats.totalPaid > 0 ? `${formatCurrency(stats.totalPaid)} paid` : "None paid yet"}
+          icon={CheckCircle2}
+          iconColor="text-green-400"
+        />
+        <StatsCard
+          title="Outstanding"
+          value={formatCurrency(stats.totalPending + stats.totalOverdue)}
+          subtitle={`${stats.pending + stats.overdue} unpaid bills`}
+          icon={AlertCircle}
+          iconColor="text-orange-400"
+        />
       </div>
 
       <div className="flex items-center justify-between">

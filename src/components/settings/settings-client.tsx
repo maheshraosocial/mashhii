@@ -26,14 +26,26 @@ const ACCENT_COLORS = [
   { id: "teal",   label: "Teal",    dot: "bg-teal-500"   },
 ] as const;
 
+const BG_THEMES = [
+  { id: "default",   label: "Default",  preview: "bg-white dark:bg-zinc-950"        },
+  { id: "slate",     label: "Slate",    preview: "bg-slate-100 dark:bg-slate-950"   },
+  { id: "blue",      label: "Blue",     preview: "bg-blue-50 dark:bg-blue-950"      },
+  { id: "green",     label: "Green",    preview: "bg-green-50 dark:bg-green-950"    },
+  { id: "purple-bg", label: "Purple",   preview: "bg-purple-50 dark:bg-purple-950"  },
+  { id: "amber-bg",  label: "Amber",    preview: "bg-amber-50 dark:bg-amber-950"    },
+] as const;
+
 export function SettingsClient({ user }: SettingsClientProps) {
   const { theme, setTheme } = useTheme();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [accentColor, setAccentColorState] = useState("purple");
+  const [bgTheme, setBgThemeState] = useState("default");
 
   useEffect(() => {
     const stored = localStorage.getItem("mashhii-accent");
     if (stored) setAccentColorState(stored);
+    const storedBg = localStorage.getItem("mashhii-bg");
+    if (storedBg) setBgThemeState(storedBg);
   }, []);
 
   const setAccentColor = (color: string) => {
@@ -43,6 +55,16 @@ export function SettingsClient({ user }: SettingsClientProps) {
       document.documentElement.removeAttribute("data-color");
     } else {
       document.documentElement.setAttribute("data-color", color);
+    }
+  };
+
+  const setBgTheme = (bg: string) => {
+    setBgThemeState(bg);
+    localStorage.setItem("mashhii-bg", bg);
+    if (bg === "default") {
+      document.documentElement.removeAttribute("data-bg");
+    } else {
+      document.documentElement.setAttribute("data-bg", bg);
     }
   };
 
@@ -105,6 +127,33 @@ export function SettingsClient({ user }: SettingsClientProps) {
                     <p className={`text-sm font-medium ${theme === id ? "text-primary" : ""}`}>{label}</p>
                     <p className="text-[11px] text-muted-foreground">{desc}</p>
                   </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Background theme */}
+          <div>
+            <Label className="mb-3 block text-sm font-medium">Background</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {BG_THEMES.map(({ id, label, preview }) => (
+                <button
+                  key={id}
+                  onClick={() => setBgTheme(id)}
+                  className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-2.5 transition-all focus:outline-none ${
+                    bgTheme === id
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-border hover:border-muted-foreground/40"
+                  }`}
+                >
+                  <div className={`h-8 w-full rounded ${preview} border border-border/40 flex items-center justify-center`}>
+                    {bgTheme === id && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </div>
+                  <span className={`text-[11px] font-medium ${bgTheme === id ? "text-primary" : "text-muted-foreground"}`}>
+                    {label}
+                  </span>
                 </button>
               ))}
             </div>
