@@ -501,12 +501,11 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
   const [newProperty, setNewProperty] = useState({
     name: "",
     type: "APARTMENT_2BHK" as PropertyType,
-    address: "",
     monthlyRent: "",
   });
 
   const [editProperty, setEditProperty] = useState<{
-    id: string; name: string; address: string; monthlyRent: string;
+    id: string; name: string; monthlyRent: string;
     type: PropertyType; occupancyStatus: OccupancyStatus; securityDeposit: string;
   } | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -531,14 +530,13 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
   /* ── Edit / Add / Delete ─────────────────────────────────────── */
   const handleEditProperty = async () => {
     if (!editProperty) return;
-    if (!editProperty.name || !editProperty.address || !editProperty.monthlyRent) {
+    if (!editProperty.name || !editProperty.monthlyRent) {
       toast.error("Please fill all required fields");
       return;
     }
     setIsSubmitting(true);
     const result = await updateProperty(editProperty.id, {
       name: editProperty.name,
-      address: editProperty.address,
       monthlyRent: parseFloat(editProperty.monthlyRent),
       type: editProperty.type,
       occupancyStatus: editProperty.occupancyStatus,
@@ -558,7 +556,7 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
   };
 
   const handleAddProperty = async () => {
-    if (!newProperty.name || !newProperty.address || !newProperty.monthlyRent) {
+    if (!newProperty.name || !newProperty.monthlyRent) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -572,7 +570,7 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
     if (result.success) {
       toast.success("Property added");
       setAddDialog(false);
-      setNewProperty({ name: "", type: "APARTMENT_2BHK", address: "", monthlyRent: "" });
+      setNewProperty({ name: "", type: "APARTMENT_2BHK", monthlyRent: "" });
     } else {
       toast.error(result.error);
     }
@@ -679,7 +677,6 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
                           setEditProperty({
                             id: property.id,
                             name: property.name,
-                            address: property.address,
                             monthlyRent: property.monthlyRent.toString(),
                             type: property.type as PropertyType,
                             occupancyStatus: property.occupancyStatus as OccupancyStatus,
@@ -810,16 +807,6 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
               </Select>
             </div>
             <div>
-              <Label htmlFor="propAddress">Address *</Label>
-              <Input
-                id="propAddress"
-                placeholder="Full address"
-                value={newProperty.address}
-                onChange={(e) => setNewProperty((p) => ({ ...p, address: e.target.value }))}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
               <Label htmlFor="propRent">Monthly Rent (₹) *</Label>
               <Input
                 id="propRent"
@@ -866,14 +853,6 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label>Address *</Label>
-              <Input
-                value={editProperty?.address ?? ""}
-                onChange={(e) => setEditProperty((p) => p ? { ...p, address: e.target.value } : p)}
-                className="mt-1.5"
-              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
