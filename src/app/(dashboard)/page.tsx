@@ -51,7 +51,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     db.rentPayment.findMany({
       where: { month, year },
-      include: { property: true },
+      include: { property: { select: { type: true } } },
     }),
     db.bill.findMany({
       where: { status: { in: ["PENDING", "OVERDUE"] } },
@@ -103,9 +103,10 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  // Rent stats
-  const totalExpectedRent = rentPayments.reduce((sum, p) => sum + safeDecimalToNumber(p.amount), 0);
-  const collectedRent = rentPayments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + safeDecimalToNumber(p.amount), 0);
+  // Rent stats — exclude OTHER property type
+  const billablePayments = rentPayments.filter((p) => p.property.type !== "OTHER");
+  const totalExpectedRent = billablePayments.reduce((sum, p) => sum + safeDecimalToNumber(p.amount), 0);
+  const collectedRent = billablePayments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + safeDecimalToNumber(p.amount), 0);
   const pendingRent = totalExpectedRent - collectedRent;
 
   // Finance
@@ -157,7 +158,7 @@ export default async function DashboardPage() {
         <StatsCard
           title="Rent Pending"
           value={formatCurrency(pendingRent)}
-          subtitle={`${rentPayments.filter((p) => p.status !== "PAID").length} properties`}
+          subtitle={`${billablePayments.filter((p) => p.status !== "PAID").length} properties`}
           icon={IndianRupee}
           iconColor={pendingRent > 0 ? "text-yellow-400" : "text-green-400"}
         />

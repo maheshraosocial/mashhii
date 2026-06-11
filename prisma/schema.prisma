@@ -242,7 +242,7 @@ model Property {
   id              String          @id @default(cuid())
   name            String
   type            PropertyType
-  address         String
+  address         String          @default("")
   floor           String?
   area            Float?
   occupancyStatus OccupancyStatus @default(VACANT)
@@ -289,7 +289,7 @@ model Tenant {
 model RentPayment {
   id            String        @id @default(cuid())
   propertyId    String
-  tenantId      String
+  tenantId      String?
   amount        Decimal       @db.Decimal(10, 2)
   month         Int
   year          Int
@@ -302,8 +302,8 @@ model RentPayment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant   Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@unique([propertyId, month, year])
   @@index([propertyId])

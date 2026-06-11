@@ -118,33 +118,32 @@ export async function updateTenant(id: string, propertyId: string, data: unknown
 // ── Rent Payments ─────────────────────────────────────────────
 
 /**
- * Ensure every property that has a tenant has a RentPayment record for the
- * current month. This is called server-side on page load, replacing the need
- * for any manual "generate" step.
+ * Ensure every non-OTHER property has a RentPayment record for the current
+ * month. Works whether or not a Tenant record exists — uses monthlyRent from
+ * the Property itself as the source of truth.
  */
 export async function ensureCurrentMonthPayments(): Promise<void> {
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  // All properties (any type) that have an active tenant
   const properties = await db.property.findMany({
-    where: { tenant: { isNot: null } },
+    where: { type: { not: "OTHER" } },
     include: { tenant: true },
   });
 
   for (const property of properties) {
-    if (!property.tenant) continue;
-    const dueDay = property.tenant.dueDate ?? 1;
+    const dueDay = property.tenant?.dueDate ?? 1;
     const dueDate = new Date(year, month - 1, dueDay);
+    const amount = property.monthlyRent;
 
     await db.rentPayment.upsert({
       where: { propertyId_month_year: { propertyId: property.id, month, year } },
       update: {},   // never overwrite an existing record
       create: {
         propertyId: property.id,
-        tenantId: property.tenant.id,
-        amount: property.tenant.rentAmount,
+        tenantId: property.tenant?.id ?? null,
+        amount,
         month,
         year,
         dueDate,
@@ -168,10 +167,7 @@ export async function oneClickMarkPaid(propertyId: string): Promise<ActionResult
   });
   if (!property) return { success: false, error: "Property not found" };
 
-  const tenant = property.tenant;
-  if (!tenant) return { success: false, error: "No tenant assigned" };
-
-  const dueDay = tenant.dueDate ?? 1;
+  const dueDay = property.tenant?.dueDate ?? 1;
   const dueDate = new Date(year, month - 1, dueDay);
 
   await db.rentPayment.upsert({
@@ -179,8 +175,8 @@ export async function oneClickMarkPaid(propertyId: string): Promise<ActionResult
     update: { status: PaymentStatus.PAID, paidDate: now },
     create: {
       propertyId,
-      tenantId: tenant.id,
-      amount: tenant.rentAmount,
+      tenantId: property.tenant?.id ?? null,
+      amount: property.monthlyRent,
       month,
       year,
       dueDate,

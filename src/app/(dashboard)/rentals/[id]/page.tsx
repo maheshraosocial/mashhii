@@ -12,7 +12,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const property = await db.property.findUnique({ where: { id }, select: { name: true } });
+  const property = await db.property.findUnique({ where: { id }, select: { name: true, type: true } });
   return { title: property?.name ?? "Property" };
 }
 
@@ -28,7 +28,6 @@ export default async function PropertyDetailPage({ params }: Props) {
       tenant: true,
       rentPayments: {
         orderBy: [{ year: "desc" }, { month: "desc" }],
-        take: 24,
       },
     },
   });
@@ -39,7 +38,7 @@ export default async function PropertyDetailPage({ params }: Props) {
     <div className="space-y-6">
       <PageHeader
         title={property.name}
-        description={property.address}
+        description={`Payment history`}
         icon={Building2}
         iconColor="text-blue-400"
       />

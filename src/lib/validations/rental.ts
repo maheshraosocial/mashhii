@@ -4,13 +4,14 @@ import { PropertyType, OccupancyStatus } from "@prisma/client";
 export const propertySchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   type: z.nativeEnum(PropertyType),
-  address: z.string().min(1, "Address is required").max(300),
+  address: z.string().max(300).optional().default(""),
   floor: z.string().max(50).optional().nullable(),
   area: z.number().positive().optional().nullable(),
   occupancyStatus: z.nativeEnum(OccupancyStatus).default("VACANT"),
   monthlyRent: z.number().positive("Rent must be a positive number"),
   securityDeposit: z.number().positive().optional().nullable(),
   description: z.string().max(1000).optional().nullable(),
+  notes: z.string().max(1000).optional().nullable(),
   amenities: z.array(z.string()).optional().default([]),
 });
 

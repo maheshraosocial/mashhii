@@ -31,12 +31,12 @@ export default async function RentalsPage() {
     orderBy: { createdAt: "asc" },
   });
 
-  // Exclude "OTHER" type from financial stats
+  // Exclude "OTHER" type from all stats and the displayed list
   const billableProperties = properties.filter((p) => p.type !== "OTHER");
 
   const totalExpectedRent = billableProperties.reduce((sum, p) => {
     const payment = p.rentPayments[0];
-    return sum + (payment ? parseFloat(payment.amount.toString()) : 0);
+    return sum + (payment ? parseFloat(payment.amount.toString()) : parseFloat(p.monthlyRent.toString()));
   }, 0);
 
   const collectedRent = billableProperties.reduce((sum, p) => {
@@ -46,26 +46,26 @@ export default async function RentalsPage() {
 
   const paidCount = billableProperties.filter((p) => p.rentPayments[0]?.status === "PAID").length;
   const pendingCount = billableProperties.filter(
-    (p) => p.rentPayments[0] && p.rentPayments[0].status !== "PAID"
+    (p) => !p.rentPayments[0] || p.rentPayments[0].status !== "PAID"
   ).length;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Rentals"
-        description="Manage your properties, tenants, and rent collection"
+        description="Track your properties and rent collection"
         icon={Building2}
         iconColor="text-blue-400"
       />
       <RentalsClient
-        properties={properties as never}
+        properties={billableProperties as never}
         stats={{
           totalExpected: totalExpectedRent,
           collected: collectedRent,
           pending: totalExpectedRent - collectedRent,
           paidCount,
           pendingCount,
-          totalProperties: properties.length,
+          totalProperties: billableProperties.length,
         }}
         currentMonth={month}
         currentYear={year}
