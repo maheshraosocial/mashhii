@@ -18,7 +18,7 @@ import {
 import { StatsCard } from "@/components/shared/stats-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatCurrency, formatDate, getBillStatusColor } from "@/lib/utils";
-import { createBill, markBillPaid, deleteBill } from "@/actions/bills";
+import { createBill, markBillPaid, deleteBill, updateBill } from "@/actions/bills";
 import { BILL_CATEGORY_LABELS } from "@/lib/constants";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { Bill, BillStatus, BillCategory } from "@/types";
@@ -33,6 +33,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", category: "OTHER" as BillCategory, amount: "", dueDate: "", isRecurring: false, notes: "" });
+  const [editBill, setEditBill] = useState<{ id: string; name: string; category: BillCategory; amount: string; dueDate: string; isRecurring: boolean; notes: string } | null>(null);
 
   const handleAdd = async () => {
     if (!form.name || !form.dueDate) { toast.error("Name and due date are required"); return; }
@@ -58,6 +59,23 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
     if (result.success) toast.success("Bill deleted");
     else toast.error(result.error);
     setDeleteId(null);
+  };
+
+  const handleEditSave = async () => {
+    if (!editBill) return;
+    if (!editBill.name || !editBill.dueDate) { toast.error("Name and due date are required"); return; }
+    setIsSubmitting(true);
+    const result = await updateBill(editBill.id, {
+      name: editBill.name,
+      category: editBill.category,
+      amount: editBill.amount ? parseFloat(editBill.amount) : undefined,
+      dueDate: new Date(editBill.dueDate),
+      isRecurring: editBill.isRecurring,
+      notes: editBill.notes || undefined,
+    });
+    setIsSubmitting(false);
+    if (result.success) { toast.success("Bill updated"); setEditBill(null); }
+    else toast.error(result.error);
   };
 
   return (
@@ -111,6 +129,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditBill({ id: bill.id, name: bill.name, category: bill.category as BillCategory, amount: bill.amount ? bill.amount.toString() : "", dueDate: new Date(bill.dueDate).toISOString().split("T")[0], isRecurring: bill.isRecurring, notes: bill.notes ?? "" })}>Edit</DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(bill.id)}>Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -165,6 +184,46 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
         onConfirm={handleDelete}
         destructive
       />
+
+      {/* Edit Bill Dialog */}
+      <Dialog open={!!editBill} onOpenChange={(o) => !o && setEditBill(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Bill</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name *</Label>
+              <Input value={editBill?.name ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, name: e.target.value } : p)} className="mt-1.5" />
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Select value={editBill?.category ?? "OTHER"} onValueChange={(v) => setEditBill((p) => p ? { ...p, category: v as BillCategory } : p)}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(BILL_CATEGORY_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Amount (₹)</Label>
+              <Input type="number" value={editBill?.amount ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, amount: e.target.value } : p)} className="mt-1.5" />
+            </div>
+            <div>
+              <Label>Due Date *</Label>
+              <Input type="date" value={editBill?.dueDate ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, dueDate: e.target.value } : p)} className="mt-1.5" />
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Input value={editBill?.notes ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, notes: e.target.value } : p)} className="mt-1.5" placeholder="Optional" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBill(null)}>Cancel</Button>
+            <Button onClick={handleEditSave} disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

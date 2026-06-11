@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, MoreHorizontal, Eye, CheckCircle2, Building2 } from "lucide-react";
+import { Plus, MoreHorizontal, Eye, CheckCircle2, Building2, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatsCard } from "@/components/shared/stats-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { markRentPaid, createProperty } from "@/actions/rentals";
+import { markRentPaid, createProperty, updateProperty, deleteProperty } from "@/actions/rentals";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { Property, Tenant, RentPayment, PropertyType } from "@/types";
 import { PROPERTY_TYPE_LABELS } from "@/lib/constants";
 
@@ -59,6 +60,9 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
     monthlyRent: "",
   });
 
+  const [editProperty, setEditProperty] = useState<{ id: string; name: string; address: string; monthlyRent: string; type: PropertyType } | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
   const handleMarkPaid = async () => {
     setIsSubmitting(true);
     const result = await markRentPaid(markPaidDialog.paymentId, {
@@ -73,6 +77,37 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
     } else {
       toast.error(result.error);
     }
+  };
+
+  const handleEditProperty = async () => {
+    if (!editProperty) return;
+    if (!editProperty.name || !editProperty.address || !editProperty.monthlyRent) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+    setIsSubmitting(true);
+    const result = await updateProperty(editProperty.id, {
+      name: editProperty.name,
+      address: editProperty.address,
+      monthlyRent: parseFloat(editProperty.monthlyRent),
+      type: editProperty.type,
+      occupancyStatus: "VACANT",
+    });
+    setIsSubmitting(false);
+    if (result.success) {
+      toast.success("Property updated");
+      setEditProperty(null);
+    } else {
+      toast.error(result.error);
+    }
+  };
+
+  const handleDeleteProperty = async () => {
+    if (!deleteId) return;
+    const result = await deleteProperty(deleteId);
+    if (result.success) toast.success("Property deleted");
+    else toast.error(result.error);
+    setDeleteId(null);
   };
 
   const handleAddProperty = async () => {
@@ -157,6 +192,14 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEditProperty({ id: property.id, name: property.name, address: property.address, monthlyRent: property.monthlyRent.toString(), type: property.type as PropertyType })}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(property.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -323,6 +366,67 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Property Dialog */}
+      <Dialog open={!!editProperty} onOpenChange={(o) => !o && setEditProperty(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Property</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Property Name *</Label>
+              <Input
+                value={editProperty?.name ?? ""}
+                onChange={(e) => setEditProperty((p) => p ? { ...p, name: e.target.value } : p)}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label>Property Type</Label>
+              <Select
+                value={editProperty?.type ?? "APARTMENT_2BHK"}
+                onValueChange={(v) => setEditProperty((p) => p ? { ...p, type: v as PropertyType } : p)}
+              >
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Address *</Label>
+              <Input
+                value={editProperty?.address ?? ""}
+                onChange={(e) => setEditProperty((p) => p ? { ...p, address: e.target.value } : p)}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label>Monthly Rent (₹) *</Label>
+              <Input
+                type="number"
+                value={editProperty?.monthlyRent ?? ""}
+                onChange={(e) => setEditProperty((p) => p ? { ...p, monthlyRent: e.target.value } : p)}
+                className="mt-1.5"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditProperty(null)}>Cancel</Button>
+            <Button onClick={handleEditProperty} disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(o) => !o && setDeleteId(null)}
+        title="Delete Property"
+        description="This will permanently delete this property and all associated rent records."
+        onConfirm={handleDeleteProperty}
+        destructive
+      />
     </>
   );
 }
