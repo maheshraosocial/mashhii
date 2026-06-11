@@ -67,6 +67,75 @@
   }
 }
 
+/* ── Accent Color Themes ────────────────────────────────────── */
+/* These override --primary & --ring while dark/light handles bg */
+
+[data-color="ocean"] {
+  --primary: 199 89% 48%;
+  --ring: 199 89% 48%;
+  --sidebar-accent: 199 89% 48%;
+}
+.dark[data-color="ocean"] {
+  --primary: 199 89% 56%;
+  --ring: 199 89% 56%;
+  --sidebar-accent: 199 89% 56%;
+}
+
+[data-color="forest"] {
+  --primary: 142 72% 32%;
+  --ring: 142 72% 32%;
+  --sidebar-accent: 142 72% 32%;
+}
+.dark[data-color="forest"] {
+  --primary: 142 72% 42%;
+  --ring: 142 72% 42%;
+  --sidebar-accent: 142 72% 42%;
+}
+
+[data-color="sunset"] {
+  --primary: 21 90% 52%;
+  --ring: 21 90% 52%;
+  --sidebar-accent: 21 90% 52%;
+}
+.dark[data-color="sunset"] {
+  --primary: 21 90% 58%;
+  --ring: 21 90% 58%;
+  --sidebar-accent: 21 90% 58%;
+}
+
+[data-color="rose"] {
+  --primary: 347 77% 50%;
+  --ring: 347 77% 50%;
+  --sidebar-accent: 347 77% 50%;
+}
+.dark[data-color="rose"] {
+  --primary: 347 77% 57%;
+  --ring: 347 77% 57%;
+  --sidebar-accent: 347 77% 57%;
+}
+
+[data-color="amber"] {
+  --primary: 38 92% 46%;
+  --ring: 38 92% 46%;
+  --sidebar-accent: 38 92% 46%;
+}
+.dark[data-color="amber"] {
+  --primary: 38 92% 54%;
+  --ring: 38 92% 54%;
+  --sidebar-accent: 38 92% 54%;
+}
+
+[data-color="teal"] {
+  --primary: 172 66% 36%;
+  --ring: 172 66% 36%;
+  --sidebar-accent: 172 66% 36%;
+}
+.dark[data-color="teal"] {
+  --primary: 172 66% 45%;
+  --ring: 172 66% 45%;
+  --sidebar-accent: 172 66% 45%;
+}
+
 /* ── Base Styles ────────────────────────────────────────────── */
 @layer base {
   * {

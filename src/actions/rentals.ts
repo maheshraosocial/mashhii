@@ -139,6 +139,25 @@ export async function markRentPaid(
   return { success: true };
 }
 
+export async function updatePaymentStatus(
+  paymentId: string,
+  status: "PAID" | "PENDING" | "OVERDUE"
+): Promise<ActionResultVoid> {
+  await requireAuth();
+
+  await db.rentPayment.update({
+    where: { id: paymentId },
+    data: {
+      status: status as PaymentStatus,
+      paidDate: status === "PAID" ? new Date() : null,
+    },
+  });
+
+  revalidatePath("/rentals");
+  revalidatePath("/");
+  return { success: true };
+}
+
 export async function createRentPayment(
   propertyId: string,
   tenantId: string,

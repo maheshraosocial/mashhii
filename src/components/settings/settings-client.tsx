@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { signOut } from "next-auth/react";
-import { LogOut, User, Palette, Database, Monitor, Sun, Moon } from "lucide-react";
+import { LogOut, User, Palette, Database, Monitor, Sun, Moon, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,9 +16,35 @@ interface SettingsClientProps {
   user: { name?: string | null; email?: string | null; image?: string | null } | null;
 }
 
+const ACCENT_COLORS = [
+  { id: "purple", label: "Purple",  dot: "bg-purple-500" },
+  { id: "ocean",  label: "Ocean",   dot: "bg-sky-500"    },
+  { id: "forest", label: "Forest",  dot: "bg-green-600"  },
+  { id: "sunset", label: "Sunset",  dot: "bg-orange-500" },
+  { id: "rose",   label: "Rose",    dot: "bg-rose-500"   },
+  { id: "amber",  label: "Amber",   dot: "bg-amber-500"  },
+  { id: "teal",   label: "Teal",    dot: "bg-teal-500"   },
+] as const;
+
 export function SettingsClient({ user }: SettingsClientProps) {
   const { theme, setTheme } = useTheme();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [accentColor, setAccentColorState] = useState("purple");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("mashhii-accent");
+    if (stored) setAccentColorState(stored);
+  }, []);
+
+  const setAccentColor = (color: string) => {
+    setAccentColorState(color);
+    localStorage.setItem("mashhii-accent", color);
+    if (color === "purple") {
+      document.documentElement.removeAttribute("data-color");
+    } else {
+      document.documentElement.setAttribute("data-color", color);
+    }
+  };
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -55,30 +81,59 @@ export function SettingsClient({ user }: SettingsClientProps) {
           </CardTitle>
           <CardDescription>Customize the look and feel of your dashboard</CardDescription>
         </CardHeader>
-        <CardContent>
-          <Label className="mb-3 block">Theme</Label>
-          <div className="grid grid-cols-3 gap-3">
-            {([
-              { id: "system", label: "System",  Icon: Monitor, desc: "Match OS setting" },
-              { id: "light",  label: "Light",   Icon: Sun,     desc: "Always light"     },
-              { id: "dark",   label: "Dark",    Icon: Moon,    desc: "Always dark"      },
-            ] as const).map(({ id, label, Icon, desc }) => (
-              <button
-                key={id}
-                onClick={() => setTheme(id)}
-                className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all focus:outline-none ${
-                  theme === id
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                    : "border-border hover:border-muted-foreground/40 hover:bg-accent"
-                }`}
-              >
-                <Icon className={`h-6 w-6 ${theme === id ? "text-primary" : "text-muted-foreground"}`} />
-                <div className="text-center">
-                  <p className={`text-sm font-medium ${theme === id ? "text-primary" : ""}`}>{label}</p>
-                  <p className="text-[11px] text-muted-foreground">{desc}</p>
-                </div>
-              </button>
-            ))}
+        <CardContent className="space-y-6">
+          {/* Brightness mode */}
+          <div>
+            <Label className="mb-3 block text-sm font-medium">Mode</Label>
+            <div className="grid grid-cols-3 gap-3">
+              {([
+                { id: "system", label: "System", Icon: Monitor, desc: "Match OS" },
+                { id: "light",  label: "Light",  Icon: Sun,     desc: "Always light" },
+                { id: "dark",   label: "Dark",   Icon: Moon,    desc: "Always dark"  },
+              ] as const).map(({ id, label, Icon, desc }) => (
+                <button
+                  key={id}
+                  onClick={() => setTheme(id)}
+                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all focus:outline-none ${
+                    theme === id
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border hover:border-muted-foreground/40 hover:bg-accent"
+                  }`}
+                >
+                  <Icon className={`h-6 w-6 ${theme === id ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className="text-center">
+                    <p className={`text-sm font-medium ${theme === id ? "text-primary" : ""}`}>{label}</p>
+                    <p className="text-[11px] text-muted-foreground">{desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Accent color */}
+          <div>
+            <Label className="mb-3 block text-sm font-medium">Accent Color</Label>
+            <div className="flex flex-wrap gap-3">
+              {ACCENT_COLORS.map(({ id, label, dot }) => (
+                <button
+                  key={id}
+                  onClick={() => setAccentColor(id)}
+                  title={label}
+                  className={`group relative flex flex-col items-center gap-1.5 focus:outline-none`}
+                >
+                  <div className={`h-9 w-9 rounded-full ${dot} flex items-center justify-center transition-all ring-offset-2 ring-offset-background ${
+                    accentColor === id ? "ring-2 ring-foreground scale-110" : "hover:scale-105 opacity-80 hover:opacity-100"
+                  }`}>
+                    {accentColor === id && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                  </div>
+                  <span className={`text-[11px] ${accentColor === id ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

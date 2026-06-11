@@ -39,6 +39,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      {/* Restore accent color before first paint to avoid flash */}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{var c=localStorage.getItem('mashhii-accent');if(c&&c!=='purple')document.documentElement.setAttribute('data-color',c);}catch(e){}` }} />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"

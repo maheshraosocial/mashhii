@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatsCard } from "@/components/shared/stats-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { markRentPaid, createProperty, updateProperty, deleteProperty } from "@/actions/rentals";
+import { markRentPaid, updatePaymentStatus, createProperty, updateProperty, deleteProperty } from "@/actions/rentals";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { Property, Tenant, RentPayment, PropertyType, OccupancyStatus } from "@/types";
 import { PROPERTY_TYPE_LABELS } from "@/lib/constants";
@@ -61,6 +61,7 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
   });
 
   const [editProperty, setEditProperty] = useState<{ id: string; name: string; address: string; monthlyRent: string; type: PropertyType; occupancyStatus: OccupancyStatus; securityDeposit: string } | null>(null);
+  const [updatingPayment, setUpdatingPayment] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleMarkPaid = async () => {
@@ -77,6 +78,13 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
     } else {
       toast.error(result.error);
     }
+  };
+
+  const handlePaymentStatusChange = async (paymentId: string, status: "PAID" | "PENDING" | "OVERDUE") => {
+    setUpdatingPayment(paymentId);
+    const result = await updatePaymentStatus(paymentId, status);
+    setUpdatingPayment(null);
+    if (!result.success) toast.error(result.error);
   };
 
   const handleEditProperty = async () => {
@@ -139,7 +147,7 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
         <StatsCard title="Expected Rent" value={formatCurrency(stats.totalExpected)} icon={Building2} iconColor="text-blue-400" />
         <StatsCard title="Collected" value={formatCurrency(stats.collected)} icon={Building2} iconColor="text-green-400" />
         <StatsCard title="Pending" value={formatCurrency(stats.pending)} icon={Building2} iconColor={stats.pending > 0 ? "text-yellow-400" : "text-green-400"} />
-        <StatsCard title="Occupancy" value={`${stats.occupancyRate}%`} icon={Building2} iconColor="text-violet-400" subtitle={`${properties.filter((p) => p.occupancyStatus === "OCCUPIED").length} of ${properties.length} occupied`} />
+        <StatsCard title="Total Properties" value={String(properties.length)} icon={Building2} iconColor="text-violet-400" subtitle="Active rentals" />
       </div>
 
       {/* Header */}
@@ -178,9 +186,6 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={property.occupancyStatus === "OCCUPIED" ? "success" : property.occupancyStatus === "VACANT" ? "outline" : "warning"}>
-                        {property.occupancyStatus.toLowerCase()}
-                      </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -222,30 +227,30 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
                       <div className="flex justify-between items-center pt-1 border-t border-border">
                         <span className="text-muted-foreground">This Month</span>
                         <div className="flex items-center gap-2">
-                          <Badge variant={isPaid ? "success" : payment.status === "OVERDUE" ? "error" : "warning"}>
-                            {payment.status.toLowerCase()}
-                          </Badge>
+                          <Select
+                            value={payment.status}
+                            onValueChange={(v) => handlePaymentStatusChange(payment.id, v as "PAID" | "PENDING" | "OVERDUE")}
+                            disabled={updatingPayment === payment.id}
+                          >
+                            <SelectTrigger className={`h-7 text-xs w-28 ${payment.status === "PAID" ? "border-green-500/50 text-green-600" : payment.status === "OVERDUE" ? "border-red-500/50 text-red-500" : "border-yellow-500/50 text-yellow-600"}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PENDING">Pending</SelectItem>
+                              <SelectItem value="PAID">Paid</SelectItem>
+                              <SelectItem value="OVERDUE">Overdue</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {isPaid && payment.paidDate && (
+                            <span className="text-xs text-muted-foreground">{formatDate(payment.paidDate)}</span>
+                          )}
                           {!isPaid && (
                             <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              onClick={() =>
-                                setMarkPaidDialog({
-                                  open: true,
-                                  paymentId: payment.id,
-                                  amount: parseFloat(payment.amount.toString()),
-                                })
-                              }
+                              size="sm" variant="ghost" className="h-7 px-2 text-xs"
+                              onClick={() => setMarkPaidDialog({ open: true, paymentId: payment.id, amount: parseFloat(payment.amount.toString()) })}
                             >
-                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                              Mark Paid
+                              <CheckCircle2 className="h-3 w-3" />
                             </Button>
-                          )}
-                          {isPaid && payment.paidDate && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(payment.paidDate)}
-                            </span>
                           )}
                         </div>
                       </div>
@@ -392,20 +397,6 @@ export function RentalsClient({ properties, stats, currentMonth, currentYear }: 
                   {Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Occupancy Status</Label>
-              <Select
-                value={editProperty?.occupancyStatus ?? "VACANT"}
-                onValueChange={(v) => setEditProperty((p) => p ? { ...p, occupancyStatus: v as OccupancyStatus } : p)}
-              >
-                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="OCCUPIED">Occupied</SelectItem>
-                  <SelectItem value="VACANT">Vacant</SelectItem>
-                  <SelectItem value="MAINTENANCE">Under Maintenance</SelectItem>
                 </SelectContent>
               </Select>
             </div>
