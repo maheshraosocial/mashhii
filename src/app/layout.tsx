@@ -15,7 +15,10 @@ export const metadata: Metadata = {
   // Static title — no template, so all pages show only "Mashhii"
   title: "Mashhii",
   description: "Your personal operating system",
-  // favicon.ico placed in src/app/ — Next.js App Router auto-serves it
+  // favicon served from public/favicon.ico via explicit link tag
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "any" }],
+  },
   robots: {
     index: false,
     follow: false,
