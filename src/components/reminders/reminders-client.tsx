@@ -36,7 +36,7 @@ export function RemindersClient({ reminders, properties }: RemindersClientProps)
     title: "", description: "", dueDate: "",
     category: "PERSONAL" as ReminderCategory,
     recurrence: "NONE" as RecurrenceType,
-    propertyId: "",
+    propertyId: "none",
   });
 
   const pending = reminders.filter((r) => r.status === "ACTIVE");
@@ -51,13 +51,13 @@ export function RemindersClient({ reminders, properties }: RemindersClientProps)
       dueDate: new Date(form.dueDate),
       category: form.category,
       recurrence: form.recurrence,
-      propertyId: form.propertyId || undefined,
+      propertyId: form.propertyId !== "none" ? form.propertyId : undefined,
     });
     setIsSubmitting(false);
     if (result.success) {
       toast.success("Reminder set");
       setAddDialog(false);
-      setForm({ title: "", description: "", dueDate: "", category: "PERSONAL", recurrence: "NONE", propertyId: "" });
+      setForm({ title: "", description: "", dueDate: "", category: "PERSONAL", recurrence: "NONE", propertyId: "none" });
     } else toast.error(result.error);
   };
 
@@ -174,7 +174,7 @@ export function RemindersClient({ reminders, properties }: RemindersClientProps)
                 <Select value={form.propertyId} onValueChange={(v) => setForm((p) => ({ ...p, propertyId: v }))}>
                   <SelectTrigger className="mt-1.5"><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

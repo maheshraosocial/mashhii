@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Plus, MoreHorizontal, List, LayoutGrid,
   Circle, PlayCircle, CheckCircle2, XCircle,
-  ChevronRight, Check, Pencil, Trash2,
+  ChevronRight, Check, Pencil, Trash2, RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,11 +30,51 @@ interface TasksClientProps {
 
 const STATUS_COLUMNS: TaskStatus[] = ["TODO", "IN_PROGRESS", "COMPLETED"];
 
-const COLUMN_META: Record<TaskStatus, { icon: React.ElementType; color: string; border: string; badge: string; ring: string }> = {
-  TODO:        { icon: Circle,       color: "text-zinc-400",   border: "border-t-zinc-400/60",   badge: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300",   ring: "ring-zinc-300 dark:ring-zinc-600" },
-  IN_PROGRESS: { icon: PlayCircle,   color: "text-blue-400",   border: "border-t-blue-400/60",   badge: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300",   ring: "ring-blue-300 dark:ring-blue-600" },
-  COMPLETED:   { icon: CheckCircle2, color: "text-emerald-400",border: "border-t-emerald-400/60",badge: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300", ring: "ring-emerald-300 dark:ring-emerald-600" },
-  CANCELLED:   { icon: XCircle,      color: "text-red-400",    border: "border-t-red-400/60",    badge: "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300",       ring: "ring-red-300 dark:ring-red-600" },
+const COLUMN_META: Record<TaskStatus, { icon: React.ElementType; color: string; border: string; borderL: string; badge: string; ring: string; colBg: string; headerBg: string; headerText: string }> = {
+  TODO: {
+    icon: Circle,
+    color: "text-zinc-400",
+    border: "border-t-2 border-t-zinc-400",
+    borderL: "border-l-4 border-l-zinc-400",
+    badge: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300",
+    ring: "ring-zinc-300 dark:ring-zinc-600",
+    colBg: "bg-zinc-50 dark:bg-zinc-900/50",
+    headerBg: "bg-zinc-200 dark:bg-zinc-700",
+    headerText: "text-zinc-700 dark:text-zinc-200",
+  },
+  IN_PROGRESS: {
+    icon: PlayCircle,
+    color: "text-blue-400",
+    border: "border-t-2 border-t-blue-500",
+    borderL: "border-l-4 border-l-blue-500",
+    badge: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300",
+    ring: "ring-blue-300 dark:ring-blue-600",
+    colBg: "bg-blue-50/60 dark:bg-blue-950/30",
+    headerBg: "bg-blue-100 dark:bg-blue-900/50",
+    headerText: "text-blue-700 dark:text-blue-300",
+  },
+  COMPLETED: {
+    icon: CheckCircle2,
+    color: "text-emerald-400",
+    border: "border-t-2 border-t-emerald-500",
+    borderL: "border-l-4 border-l-emerald-500",
+    badge: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300",
+    ring: "ring-emerald-300 dark:ring-emerald-600",
+    colBg: "bg-emerald-50/60 dark:bg-emerald-950/30",
+    headerBg: "bg-emerald-100 dark:bg-emerald-900/50",
+    headerText: "text-emerald-700 dark:text-emerald-300",
+  },
+  CANCELLED: {
+    icon: XCircle,
+    color: "text-red-400",
+    border: "border-t-2 border-t-red-500",
+    borderL: "border-l-4 border-l-red-500",
+    badge: "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300",
+    ring: "ring-red-300 dark:ring-red-600",
+    colBg: "bg-red-50/40 dark:bg-red-950/20",
+    headerBg: "bg-red-100 dark:bg-red-900/50",
+    headerText: "text-red-700 dark:text-red-300",
+  },
 };
 
 const emptyForm = { title: "", description: "", priority: "MEDIUM" as TaskPriority, dueDate: "", tags: "" };
@@ -100,7 +140,7 @@ export function TasksClient({ tasks }: TasksClientProps) {
     const meta = COLUMN_META[status];
     const isCompleted = status === "COMPLETED";
     return (
-      <Card className={`border-t-2 ${meta.border} hover:shadow-sm transition-all`}>
+      <Card className={`${meta.border} hover:shadow-sm transition-all`}>
         <CardContent className="p-3 space-y-2.5">
           {/* Title row */}
           <div className="flex items-start gap-2">
@@ -196,20 +236,20 @@ export function TasksClient({ tasks }: TasksClientProps) {
             const meta = COLUMN_META[status];
             const Icon = meta.icon;
             return (
-              <div key={status} className="space-y-2">
+              <div key={status} className={`rounded-xl border border-border/60 overflow-hidden ${meta.colBg}`}>
                 {/* Column header */}
-                <div className={`flex items-center gap-2 px-1 py-1 rounded-md`}>
+                <div className={`flex items-center gap-2 px-3 py-2.5 ${meta.headerBg} border-b border-border/40`}>
                   <Icon className={`h-4 w-4 ${meta.color}`} />
-                  <h3 className="text-sm font-semibold">{TASK_STATUS_LABELS[status]}</h3>
-                  <span className={`ml-auto text-[11px] font-medium px-1.5 py-0.5 rounded-full ${meta.badge}`}>
+                  <h3 className={`text-sm font-bold tracking-wide ${meta.headerText}`}>{TASK_STATUS_LABELS[status]}</h3>
+                  <span className={`ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.badge}`}>
                     {grouped[status].length}
                   </span>
                 </div>
                 {/* Cards */}
-                <div className="space-y-2 min-h-[80px]">
+                <div className="space-y-2 min-h-[80px] p-2">
                   {grouped[status].length === 0 ? (
-                    <div className="border-2 border-dashed border-border rounded-lg h-16 flex items-center justify-center">
-                      <p className="text-xs text-muted-foreground">No tasks</p>
+                    <div className="border-2 border-dashed border-border/40 rounded-lg h-16 flex items-center justify-center">
+                      <p className="text-xs text-muted-foreground">Empty</p>
                     </div>
                   ) : (
                     grouped[status].map((task) => <TaskCard key={task.id} task={task} status={status} />)
@@ -222,29 +262,93 @@ export function TasksClient({ tasks }: TasksClientProps) {
       ) : (
         <div className="space-y-2">
           {tasks.map((task) => {
-            const meta = COLUMN_META[task.status as TaskStatus] ?? COLUMN_META.TODO;
+            const s = task.status as TaskStatus;
+            const meta = COLUMN_META[s] ?? COLUMN_META.TODO;
             const Icon = meta.icon;
+            const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && s !== "COMPLETED" && s !== "CANCELLED";
             return (
-              <Card key={task.id} className={`border-l-2 ${meta.border.replace("border-t-", "border-l-")}`}>
-                <CardContent className="flex items-center gap-3 p-4">
+              <Card key={task.id} className={`${meta.borderL} hover:shadow-sm transition-all`}>
+                <CardContent className="flex items-center gap-3 p-3">
+                  {/* Status icon */}
                   <Icon className={`h-5 w-5 shrink-0 ${meta.color}`} />
+
+                  {/* Title + meta */}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${task.status === "COMPLETED" ? "line-through text-muted-foreground" : ""}`}>
+                    <p className={`text-sm font-medium leading-snug ${
+                      s === "COMPLETED" ? "line-through text-muted-foreground" : ""
+                    }`}>
                       {task.title}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {task.dueDate && `Due ${formatDate(task.dueDate)} · `}
-                      {TASK_PRIORITY_LABELS[task.priority as TaskPriority]}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${getPriorityColor(task.priority)}`}>
+                        {TASK_PRIORITY_LABELS[task.priority as TaskPriority]}
+                      </span>
+                      {task.dueDate && (
+                        <span className={`text-xs ${
+                          isOverdue ? "text-red-400 font-medium" : "text-muted-foreground"
+                        }`}>
+                          {isOverdue ? "⚠ " : ""}Due {formatDate(task.dueDate)}
+                        </span>
+                      )}
+                      <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${meta.badge}`}>
+                        {TASK_STATUS_LABELS[s]}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={`text-xs ${meta.badge}`}>
-                      {TASK_STATUS_LABELS[task.status as TaskStatus]}
-                    </Badge>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditTask(task)}>
+
+                  {/* Inline actions */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Status transition */}
+                    {s === "TODO" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1 text-blue-600 border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-950"
+                        onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" /> Start
+                      </Button>
+                    )}
+                    {s === "IN_PROGRESS" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1 text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950"
+                        onClick={() => handleStatusChange(task.id, "COMPLETED")}
+                      >
+                        <Check className="h-3.5 w-3.5" /> Done
+                      </Button>
+                    )}
+                    {s === "COMPLETED" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleStatusChange(task.id, "TODO")}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" /> Reopen
+                      </Button>
+                    )}
+
+                    {/* Edit */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => setEditTask(task)}
+                      title="Edit"
+                    >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteId(task.id)}>
+
+                    {/* Delete */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeleteId(task.id)}
+                      title="Delete"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
