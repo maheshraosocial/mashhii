@@ -7,17 +7,17 @@ export const APP_DESCRIPTION = "Your personal operating system";
 
 export const NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: "LayoutDashboard" },
-  { label: "Rentals", href: "/rentals", icon: "Building2" },
-  { label: "Bills", href: "/bills", icon: "Receipt" },
   { label: "Tasks", href: "/tasks", icon: "CheckSquare" },
-  { label: "Notes", href: "/notes", icon: "FileText" },
-  { label: "Ideas", href: "/ideas", icon: "Lightbulb" },
   { label: "Habits", href: "/habits", icon: "Flame" },
+  { label: "Goals", href: "/goals", icon: "Target" },
+  { label: "Ideas", href: "/ideas", icon: "Lightbulb" },
   { label: "Projects", href: "/projects", icon: "FolderKanban" },
+  { label: "Notes", href: "/notes", icon: "FileText" },
+  { label: "Bills", href: "/bills", icon: "Receipt" },
+  { label: "Rentals", href: "/rentals", icon: "Building2" },
+  { label: "Reminders", href: "/reminders", icon: "Bell" },
   { label: "Documents", href: "/documents", icon: "Archive" },
   // { label: "Finance", href: "/finance", icon: "TrendingUp" }, // DISABLED
-  { label: "Goals", href: "/goals", icon: "Target" },
-  { label: "Reminders", href: "/reminders", icon: "Bell" },
 ] as const;
 
 export const SETTINGS_HREF = "/settings";
