@@ -189,8 +189,12 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Secondary stats — Bills, Projects, Reminders, Rentals */}
+      {/* Secondary stats — priority order #5-#8: Rentals(disabled), Bills, Reminders, Projects */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* #5 Rent DISABLED
+        <StatsCard title="Rent" ... href="/rentals" />
+        */}
+        {/* #6 Bills */}
         <StatsCard
           title="Bills Pending"
           value={bills.length}
@@ -199,14 +203,7 @@ export default async function DashboardPage() {
           iconColor={bills.some((b) => b.status === "OVERDUE") ? "text-red-400" : "text-yellow-400"}
           href="/bills"
         />
-        <StatsCard
-          title="Active Projects"
-          value={projects.length}
-          subtitle="In progress"
-          icon={FolderKanban}
-          iconColor="text-blue-400"
-          href="/projects"
-        />
+        {/* #7 Reminders */}
         <StatsCard
           title="Reminders"
           value={reminders.length}
@@ -215,9 +212,16 @@ export default async function DashboardPage() {
           iconColor="text-pink-400"
           href="/reminders"
         />
-        {/* Rent DISABLED — placeholder keeps grid stable
-        <StatsCard title="Rent" ... href="/rentals" />
-        */}
+        {/* #8 Projects */}
+        <StatsCard
+          title="Active Projects"
+          value={projects.length}
+          subtitle="In progress"
+          icon={FolderKanban}
+          iconColor="text-blue-400"
+          href="/projects"
+        />
+        {/* Capture Inbox */}
         <StatsCard
           title="Capture Inbox"
           value={recentCaptures.length}
@@ -226,6 +230,30 @@ export default async function DashboardPage() {
           iconColor="text-sky-400"
           href="/capture"
         />
+      </div>
+
+      {/* Ideas → Goals → Projects → Tasks pipeline */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground px-0.5">
+        <Link href="/ideas" className="flex items-center gap-1 hover:text-foreground transition-colors">
+          <Lightbulb className="h-3 w-3 text-yellow-400" />
+          <span>Ideas</span>
+        </Link>
+        <ArrowRight className="h-3 w-3" />
+        <Link href="/goals" className="flex items-center gap-1 hover:text-foreground transition-colors">
+          <Target className="h-3 w-3 text-emerald-400" />
+          <span>Goals</span>
+        </Link>
+        <ArrowRight className="h-3 w-3" />
+        <Link href="/projects" className="flex items-center gap-1 hover:text-foreground transition-colors">
+          <FolderKanban className="h-3 w-3 text-blue-400" />
+          <span>Projects</span>
+        </Link>
+        <ArrowRight className="h-3 w-3" />
+        <Link href="/tasks" className="flex items-center gap-1 hover:text-foreground transition-colors">
+          <CheckSquare className="h-3 w-3 text-violet-400" />
+          <span>Tasks</span>
+        </Link>
+        <span className="ml-1 text-muted-foreground/50">— Notes &amp; Documents: reference &amp; storage</span>
       </div>
 
       {/* ── Main content grid ──────────────────────────────────── */}
@@ -352,7 +380,7 @@ export default async function DashboardPage() {
         {/* ── Right column (1/3) — Habits · Reminders · Bills ── */}
         <div className="space-y-6">
 
-          {/* HABITS TODAY */}
+          {/* #2 HABITS TODAY */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div className="flex items-center gap-2">
@@ -398,33 +426,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* REMINDERS */}
-          {reminders.length > 0 && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-pink-400" />
-                  <CardTitle>Reminders</CardTitle>
-                </div>
-                <Link href="/reminders" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-                  View all <ArrowRight className="h-3 w-3" />
-                </Link>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {reminders.map((reminder) => (
-                  <div key={reminder.id} className="flex items-start gap-2 py-1.5 border-b border-border last:border-0">
-                    <Bell className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground truncate">{reminder.title}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(reminder.dueDate)}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* BILLS */}
+          {/* #6 BILLS — before Reminders per priority */}
           {bills.length > 0 && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -450,6 +452,32 @@ export default async function DashboardPage() {
                       <Badge variant={bill.status === "OVERDUE" ? "error" : "warning"} className="text-xs">
                         {bill.status}
                       </Badge>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* #7 REMINDERS */}
+          {reminders.length > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-pink-400" />
+                  <CardTitle>Reminders</CardTitle>
+                </div>
+                <Link href="/reminders" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                  View all <ArrowRight className="h-3 w-3" />
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {reminders.map((reminder) => (
+                  <div key={reminder.id} className="flex items-start gap-2 py-1.5 border-b border-border last:border-0">
+                    <Bell className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground truncate">{reminder.title}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(reminder.dueDate)}</p>
                     </div>
                   </div>
                 ))}
