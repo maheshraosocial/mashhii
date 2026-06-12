@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { Bell } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { RemindersClient } from "@/components/reminders/reminders-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Reminders" };
 
 export default async function RemindersPage() {
   const session = await auth();

@@ -5,9 +5,7 @@ import { Building2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { RentalsClient } from "@/components/rentals/rentals-client";
 import { ensureCurrentMonthPayments } from "@/actions/rentals";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Rentals" };
 
 export default async function RentalsPage() {
   const session = await auth();

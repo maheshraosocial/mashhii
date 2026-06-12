@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { Target } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { GoalsClient } from "@/components/goals/goals-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Goals" };
 
 export default async function GoalsPage() {
   const session = await auth();

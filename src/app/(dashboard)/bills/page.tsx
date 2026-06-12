@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { Receipt } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { BillsClient } from "@/components/bills/bills-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Bills" };
 
 export default async function BillsPage() {
   const session = await auth();

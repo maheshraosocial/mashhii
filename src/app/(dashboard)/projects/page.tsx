@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { FolderKanban } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ProjectsClient } from "@/components/projects/projects-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Projects" };
 
 export default async function ProjectsPage() {
   const session = await auth();

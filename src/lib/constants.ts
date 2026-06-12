@@ -15,7 +15,7 @@ export const NAV_ITEMS = [
   { label: "Habits", href: "/habits", icon: "Flame" },
   { label: "Projects", href: "/projects", icon: "FolderKanban" },
   { label: "Documents", href: "/documents", icon: "Archive" },
-  { label: "Finance", href: "/finance", icon: "TrendingUp" },
+  // { label: "Finance", href: "/finance", icon: "TrendingUp" }, // DISABLED
   { label: "Goals", href: "/goals", icon: "Target" },
   { label: "Reminders", href: "/reminders", icon: "Bell" },
 ] as const;

@@ -12,11 +12,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: {
-    default: "Mashhii",
-    template: "%s | Mashhii",
-  },
+  title: "Mashhii",
   description: "Your personal operating system",
+  icons: {
+    icon: "/favicon.ico",
+  },
   robots: {
     index: false, // Private app — not for public indexing
     follow: false,

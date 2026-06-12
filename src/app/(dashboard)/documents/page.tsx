@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { Archive } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { DocumentsClient } from "@/components/documents/documents-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Documents" };
 
 export default async function DocumentsPage() {
   const session = await auth();

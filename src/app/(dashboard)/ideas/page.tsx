@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { Lightbulb } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { IdeasClient } from "@/components/ideas/ideas-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Ideas" };
 
 export default async function IdeasPage() {
   const session = await auth();

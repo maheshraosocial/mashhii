@@ -5,9 +5,7 @@ import { Flame } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { HabitsClient } from "@/components/habits/habits-client";
 import { subDays, startOfDay } from "date-fns";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Habits" };
 
 export default async function HabitsPage() {
   const session = await auth();

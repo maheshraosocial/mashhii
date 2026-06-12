@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
 
 interface StatsCardProps {
   title: string;
@@ -7,6 +9,7 @@ interface StatsCardProps {
   subtitle?: string;
   icon?: LucideIcon;
   iconColor?: string;
+  href?: string;
   trend?: {
     value: number;
     label: string;
@@ -21,13 +24,15 @@ export function StatsCard({
   subtitle,
   icon: Icon,
   iconColor = "text-primary",
+  href,
   trend,
   className,
 }: StatsCardProps) {
-  return (
+  const content = (
     <div
       className={cn(
         "rounded-xl border border-border bg-card p-5 flex flex-col gap-3",
+        href && "cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
         className
       )}
     >
@@ -70,4 +75,14 @@ export function StatsCard({
       )}
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href as Route} className="block">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

@@ -5,9 +5,7 @@ import { TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { FinanceClient } from "@/components/finance/finance-client";
 import { startOfYear } from "date-fns";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Finance" };
 
 export default async function FinancePage() {
   const session = await auth();

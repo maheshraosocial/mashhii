@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { NotesClient } from "@/components/notes/notes-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Notes" };
 
 export default async function NotesPage() {
   const session = await auth();

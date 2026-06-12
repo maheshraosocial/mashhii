@@ -5,8 +5,8 @@ import {
   Building2,
   Receipt,
   CheckSquare,
-  TrendingUp,
-  TrendingDown,
+  // TrendingUp, // Finance — DISABLED
+  // TrendingDown, // Finance — DISABLED
   Flame,
   Target,
   FolderKanban,
@@ -23,7 +23,6 @@ import { InboxWidget } from "@/components/dashboard/inbox-widget";
 import { formatCurrency, formatDate, getMonthYear, safeDecimalToNumber } from "@/lib/utils";
 import { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -45,8 +44,8 @@ export default async function DashboardPage() {
     projects,
     goals,
     reminders,
-    income,
-    expenses,
+    // income, // Finance — DISABLED
+    // expenses, // Finance — DISABLED
     recentCaptures,
   ] = await Promise.all([
     db.rentPayment.findMany({
@@ -88,14 +87,15 @@ export default async function DashboardPage() {
       orderBy: { dueDate: "asc" },
       take: 5,
     }),
-    db.income.aggregate({
-      where: { date: { gte: startOfMonth, lte: endOfMonth } },
-      _sum: { amount: true },
-    }),
-    db.expense.aggregate({
-      where: { date: { gte: startOfMonth, lte: endOfMonth } },
-      _sum: { amount: true },
-    }),
+    // Finance DISABLED — keep for future re-enablement
+    // db.income.aggregate({
+    //   where: { date: { gte: startOfMonth, lte: endOfMonth } },
+    //   _sum: { amount: true },
+    // }),
+    // db.expense.aggregate({
+    //   where: { date: { gte: startOfMonth, lte: endOfMonth } },
+    //   _sum: { amount: true },
+    // }),
     db.quickCapture.findMany({
       where: { status: "INBOX" },
       orderBy: { createdAt: "desc" },
@@ -109,10 +109,10 @@ export default async function DashboardPage() {
   const collectedRent = billablePayments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + safeDecimalToNumber(p.amount), 0);
   const pendingRent = totalExpectedRent - collectedRent;
 
-  // Finance
-  const monthlyIncome = safeDecimalToNumber(income._sum.amount);
-  const monthlyExpenses = safeDecimalToNumber(expenses._sum.amount);
-  const monthlySavings = monthlyIncome - monthlyExpenses;
+  // Finance DISABLED
+  // const monthlyIncome = safeDecimalToNumber(income._sum.amount);
+  // const monthlyExpenses = safeDecimalToNumber(expenses._sum.amount);
+  // const monthlySavings = monthlyIncome - monthlyExpenses;
 
   // Habits
   const totalPossibleEntries = habits.length * now.getDate();
@@ -154,6 +154,7 @@ export default async function DashboardPage() {
           subtitle={`of ${formatCurrency(totalExpectedRent)} expected`}
           icon={Building2}
           iconColor="text-green-400"
+          href="/rentals"
         />
         <StatsCard
           title="Rent Pending"
@@ -161,20 +162,25 @@ export default async function DashboardPage() {
           subtitle={`${billablePayments.filter((p) => p.status !== "PAID").length} properties`}
           icon={IndianRupee}
           iconColor={pendingRent > 0 ? "text-yellow-400" : "text-green-400"}
+          href="/rentals"
         />
+        {/* Finance DISABLED
         <StatsCard
           title="Monthly Income"
           value={formatCurrency(monthlyIncome, { compact: true })}
           subtitle={`Savings: ${formatCurrency(monthlySavings, { compact: true })}`}
           icon={TrendingUp}
           iconColor="text-blue-400"
+          href="/finance"
         />
+        */}
         <StatsCard
           title="Bills Pending"
           value={bills.length}
           subtitle={`${bills.filter((b) => b.status === "OVERDUE").length} overdue`}
           icon={Receipt}
           iconColor={bills.some((b) => b.status === "OVERDUE") ? "text-red-400" : "text-yellow-400"}
+          href="/bills"
         />
       </div>
 
@@ -186,6 +192,7 @@ export default async function DashboardPage() {
           subtitle={`${tasks.length} open total`}
           icon={CheckSquare}
           iconColor="text-violet-400"
+          href="/tasks"
         />
         <StatsCard
           title="Habit Rate"
@@ -193,6 +200,7 @@ export default async function DashboardPage() {
           subtitle={`${habitEntries.length} completions this month`}
           icon={Flame}
           iconColor="text-orange-400"
+          href="/habits"
         />
         <StatsCard
           title="Active Projects"
@@ -200,6 +208,7 @@ export default async function DashboardPage() {
           subtitle="In progress"
           icon={FolderKanban}
           iconColor="text-blue-400"
+          href="/projects"
         />
         <StatsCard
           title="Active Goals"
@@ -207,6 +216,7 @@ export default async function DashboardPage() {
           subtitle="Being tracked"
           icon={Target}
           iconColor="text-emerald-400"
+          href="/goals"
         />
       </div>
 

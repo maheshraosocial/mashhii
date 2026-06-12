@@ -2,9 +2,10 @@ import { signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { APP_NAME } from "@/lib/constants";
+import Image from "next/image";
 
 export const metadata = {
-  title: "Sign In",
+  title: "Mashhii",
 };
 
 export default async function LoginPage() {
@@ -18,9 +19,13 @@ export default async function LoginPage() {
     <div className="w-full max-w-sm mx-auto px-4">
       {/* Logo */}
       <div className="flex flex-col items-center gap-6 mb-8">
-        <div className="size-14 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-          <span className="text-2xl font-bold text-primary-foreground">M</span>
-        </div>
+        <Image
+          src="/logo.jpg"
+          alt="Mashhii"
+          width={56}
+          height={56}
+          className="rounded-2xl shadow-lg shadow-primary/20 object-cover"
+        />
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             {APP_NAME}

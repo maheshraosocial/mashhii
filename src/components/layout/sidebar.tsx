@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { Route } from "next";
 import {
@@ -19,7 +20,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,7 +37,7 @@ const navItems = [
   { label: "Habits", href: "/habits", icon: Flame },
   { label: "Projects", href: "/projects", icon: FolderKanban },
   { label: "Documents", href: "/documents", icon: Archive },
-  { label: "Finance", href: "/finance", icon: TrendingUp },
+  // { label: "Finance", href: "/finance", icon: TrendingUp }, // DISABLED
   { label: "Goals", href: "/goals", icon: Target },
   { label: "Reminders", href: "/reminders", icon: Bell },
 ];
@@ -69,9 +69,13 @@ export function Sidebar({ className }: SidebarProps) {
           "flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border shrink-0",
           collapsed && "px-3 justify-center"
         )}>
-          <div className="size-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <Zap className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <Image
+            src="/logo.jpg"
+            alt="Mashhii"
+            width={28}
+            height={28}
+            className="rounded-lg shrink-0 object-cover"
+          />
           {!collapsed && (
             <span className="font-semibold text-sm text-sidebar-foreground truncate">
               {APP_NAME}

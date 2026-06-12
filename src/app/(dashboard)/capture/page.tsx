@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { Inbox } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { CapturesClient } from "@/components/captures/captures-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Quick Capture" };
 
 export default async function CapturesPage() {
   const session = await auth();

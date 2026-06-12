@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { CheckSquare } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { TasksClient } from "@/components/tasks/tasks-client";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Tasks" };
 
 export default async function TasksPage() {
   const session = await auth();
