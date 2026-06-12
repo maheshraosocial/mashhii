@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Minus, MoreHorizontal, Target, CheckCircle2, Pencil } from "lucide-react";
@@ -34,6 +34,85 @@ const emptyForm = {
   targetDate: "", unit: "tasks", targetValue: "10",
 };
 
+type FormValues = typeof emptyForm;
+
+// ── GoalForm is at MODULE SCOPE so React never unmounts it on parent re-renders ──
+// If defined inside GoalsClient, every state change (keypress) creates a new
+// component identity → unmount+remount → focus lost. Module-scope = stable identity.
+function GoalForm({
+  values,
+  onChange,
+}: {
+  values: FormValues;
+  onChange: (patch: Partial<FormValues>) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label>Title *</Label>
+        <Input
+          value={values.title}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className="mt-1.5"
+          placeholder="What do you want to achieve?"
+          autoFocus
+        />
+      </div>
+      <div>
+        <Label>Description</Label>
+        <Textarea
+          value={values.description}
+          onChange={(e) => onChange({ description: e.target.value })}
+          className="mt-1.5"
+          rows={2}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Category</Label>
+          <Select value={values.category} onValueChange={(v) => onChange({ category: v as GoalCategory })}>
+            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(GOAL_CATEGORY_LABELS).map(([v, l]) => (
+                <SelectItem key={v} value={v}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Target Date</Label>
+          <Input
+            type="date"
+            value={values.targetDate}
+            onChange={(e) => onChange({ targetDate: e.target.value })}
+            className="mt-1.5"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Target Value</Label>
+          <Input
+            type="number"
+            value={values.targetValue}
+            onChange={(e) => onChange({ targetValue: e.target.value })}
+            className="mt-1.5"
+          />
+        </div>
+        <div>
+          <Label>Unit</Label>
+          <Input
+            value={values.unit}
+            onChange={(e) => onChange({ unit: e.target.value })}
+            className="mt-1.5"
+            placeholder="e.g. tasks, km, books"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function GoalsClient({ goals: initialGoals }: GoalsClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -47,9 +126,12 @@ export function GoalsClient({ goals: initialGoals }: GoalsClientProps) {
   const [form, setForm] = useState(emptyForm);
   const [editForm, setEditForm] = useState(emptyForm);
 
-  // ── Helpers ─────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────
 
-  const refreshPage = () => startTransition(() => router.refresh());
+  const refreshPage = useCallback(
+    () => startTransition(() => router.refresh()),
+    [router]
+  );
 
   const currentValue = (goal: GoalWithMilestones) =>
     goal.currentValue ? parseFloat(goal.currentValue.toString()) : 0;
@@ -156,46 +238,19 @@ export function GoalsClient({ goals: initialGoals }: GoalsClientProps) {
     setDeleteId(null);
   };
 
-  // ── Render ────────────────────────────────────────────────────
+  // ── Stable form change handlers (avoid recreation on every render) ──
 
-  const GoalForm = ({ values, onChange }: {
-    values: typeof emptyForm;
-    onChange: (patch: Partial<typeof emptyForm>) => void;
-  }) => (
-    <div className="space-y-4">
-      <div>
-        <Label>Title *</Label>
-        <Input value={values.title} onChange={(e) => onChange({ title: e.target.value })} className="mt-1.5" placeholder="What do you want to achieve?" />
-      </div>
-      <div>
-        <Label>Description</Label>
-        <Textarea value={values.description} onChange={(e) => onChange({ description: e.target.value })} className="mt-1.5" rows={2} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Category</Label>
-          <Select value={values.category} onValueChange={(v) => onChange({ category: v as GoalCategory })}>
-            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-            <SelectContent>{Object.entries(GOAL_CATEGORY_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Target Date</Label>
-          <Input type="date" value={values.targetDate} onChange={(e) => onChange({ targetDate: e.target.value })} className="mt-1.5" />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Target Value</Label>
-          <Input type="number" value={values.targetValue} onChange={(e) => onChange({ targetValue: e.target.value })} className="mt-1.5" />
-        </div>
-        <div>
-          <Label>Unit</Label>
-          <Input value={values.unit} onChange={(e) => onChange({ unit: e.target.value })} className="mt-1.5" placeholder="e.g. tasks, km, books" />
-        </div>
-      </div>
-    </div>
+  const handleFormChange = useCallback(
+    (patch: Partial<FormValues>) => setForm((p) => ({ ...p, ...patch })),
+    []
   );
+
+  const handleEditFormChange = useCallback(
+    (patch: Partial<FormValues>) => setEditForm((p) => ({ ...p, ...patch })),
+    []
+  );
+
+  // ── Render ────────────────────────────────────────────────────
 
   return (
     <>
@@ -328,7 +383,7 @@ export function GoalsClient({ goals: initialGoals }: GoalsClientProps) {
       <Dialog open={addDialog} onOpenChange={setAddDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>New Goal</DialogTitle></DialogHeader>
-          <GoalForm values={form} onChange={(patch) => setForm((p) => ({ ...p, ...patch }))} />
+          <GoalForm values={form} onChange={handleFormChange} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancel</Button>
             <Button onClick={handleAdd} disabled={isSubmitting}>{isSubmitting ? "Creating..." : "Create Goal"}</Button>
@@ -340,7 +395,7 @@ export function GoalsClient({ goals: initialGoals }: GoalsClientProps) {
       <Dialog open={!!editGoal} onOpenChange={(o) => !o && setEditGoal(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit Goal</DialogTitle></DialogHeader>
-          <GoalForm values={editForm} onChange={(patch) => setEditForm((p) => ({ ...p, ...patch }))} />
+          <GoalForm values={editForm} onChange={handleEditFormChange} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditGoal(null)}>Cancel</Button>
             <Button onClick={handleEdit} disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Changes"}</Button>

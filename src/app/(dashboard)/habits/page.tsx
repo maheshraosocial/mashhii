@@ -11,13 +11,14 @@ export default async function HabitsPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const thirtyDaysAgo = startOfDay(subDays(new Date(), 30));
+  // 90 days for best-streak calculation
+  const ninetyDaysAgo = startOfDay(subDays(new Date(), 90));
 
+  // Fetch ALL habits (active + paused) so users can resume paused ones
   const habits = await db.habit.findMany({
-    where: { isActive: true },
     include: {
       entries: {
-        where: { date: { gte: thirtyDaysAgo } },
+        where: { date: { gte: ninetyDaysAgo } },
         orderBy: { date: "asc" },
       },
     },

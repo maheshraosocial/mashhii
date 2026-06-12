@@ -12,13 +12,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  // Static title — no template, so all pages show only "Mashhii"
   title: "Mashhii",
   description: "Your personal operating system",
-  icons: {
-    icon: "/favicon.ico",
-  },
+  // favicon.ico placed in src/app/ — Next.js App Router auto-serves it
   robots: {
-    index: false, // Private app — not for public indexing
+    index: false,
     follow: false,
   },
 };

@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
-  Building2,
+  // Building2, // Rent — DISABLED
   Receipt,
   CheckSquare,
   // TrendingUp, // Finance — DISABLED
@@ -12,7 +12,8 @@ import {
   FolderKanban,
   Bell,
   ArrowRight,
-  IndianRupee,
+  // IndianRupee, // Rent — DISABLED
+  Lightbulb,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +37,7 @@ export default async function DashboardPage() {
 
   // Parallel data fetching for performance
   const [
-    rentPayments,
+    // rentPayments, // Rent — DISABLED
     bills,
     tasks,
     habits,
@@ -47,11 +48,13 @@ export default async function DashboardPage() {
     // income, // Finance — DISABLED
     // expenses, // Finance — DISABLED
     recentCaptures,
+    ideasCount,
   ] = await Promise.all([
-    db.rentPayment.findMany({
-      where: { month, year },
-      include: { property: { select: { type: true, name: true } } },
-    }),
+    // Rent DISABLED — keep for future re-enablement
+    // db.rentPayment.findMany({
+    //   where: { month, year },
+    //   include: { property: { select: { type: true, name: true } } },
+    // }),
     db.bill.findMany({
       where: { status: { in: ["PENDING", "OVERDUE"] } },
       orderBy: { dueDate: "asc" },
@@ -101,13 +104,14 @@ export default async function DashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 4,
     }),
+    db.idea.count(),
   ]);
 
-  // Rent stats — exclude OTHER property type
-  const billablePayments = rentPayments.filter((p) => p.property.type !== "OTHER");
-  const totalExpectedRent = billablePayments.reduce((sum, p) => sum + safeDecimalToNumber(p.amount), 0);
-  const collectedRent = billablePayments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + safeDecimalToNumber(p.amount), 0);
-  const pendingRent = totalExpectedRent - collectedRent;
+  // Rent DISABLED
+  // const billablePayments = rentPayments.filter((p) => p.property.type !== "OTHER");
+  // const totalExpectedRent = billablePayments.reduce(...);
+  // const collectedRent = ...;
+  // const pendingRent = ...;
 
   // Finance DISABLED
   // const monthlyIncome = safeDecimalToNumber(income._sum.amount);
@@ -148,31 +152,12 @@ export default async function DashboardPage() {
 
       {/* Primary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Rent Collected"
-          value={formatCurrency(collectedRent)}
-          subtitle={`of ${formatCurrency(totalExpectedRent)} expected`}
-          icon={Building2}
-          iconColor="text-green-400"
-          href="/rentals"
-        />
-        <StatsCard
-          title="Rent Pending"
-          value={formatCurrency(pendingRent)}
-          subtitle={`${billablePayments.filter((p) => p.status !== "PAID").length} properties`}
-          icon={IndianRupee}
-          iconColor={pendingRent > 0 ? "text-yellow-400" : "text-green-400"}
-          href="/rentals"
-        />
+        {/* Rent DISABLED
+        <StatsCard title="Rent Collected" ... href="/rentals" />
+        <StatsCard title="Rent Pending" ... href="/rentals" />
+        */}
         {/* Finance DISABLED
-        <StatsCard
-          title="Monthly Income"
-          value={formatCurrency(monthlyIncome, { compact: true })}
-          subtitle={`Savings: ${formatCurrency(monthlySavings, { compact: true })}`}
-          icon={TrendingUp}
-          iconColor="text-blue-400"
-          href="/finance"
-        />
+        <StatsCard title="Monthly Income" ... href="/finance" />
         */}
         <StatsCard
           title="Bills Pending"
@@ -181,6 +166,14 @@ export default async function DashboardPage() {
           icon={Receipt}
           iconColor={bills.some((b) => b.status === "OVERDUE") ? "text-red-400" : "text-yellow-400"}
           href="/bills"
+        />
+        <StatsCard
+          title="Ideas"
+          value={ideasCount}
+          subtitle="Captured ideas"
+          icon={Lightbulb}
+          iconColor="text-yellow-400"
+          href="/ideas"
         />
       </div>
 
@@ -223,49 +216,11 @@ export default async function DashboardPage() {
       {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Left column — Rent + Bills */}
+        {/* Left column — Bills + Goals */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Rent collection */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Rent Collection — {getMonthYear(month, year)}</CardTitle>
-              <Link href="/rentals" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-                View all <ArrowRight className="h-3 w-3" />
-              </Link>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {rentPayments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No rent payments for this month
-                </p>
-              ) : (
-                rentPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{payment.property.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Due: {formatDate(payment.dueDate)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium tabular-nums">
-                        {formatCurrency(safeDecimalToNumber(payment.amount))}
-                      </span>
-                      <Badge
-                        variant={
-                          payment.status === "PAID" ? "success" :
-                          payment.status === "OVERDUE" ? "error" : "warning"
-                        }
-                      >
-                        {payment.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          {/* Rent DISABLED — keep for future re-enablement */}
+          {/* <Card>Rent Collection</Card> */}
 
           {/* Upcoming bills */}
           <Card>
