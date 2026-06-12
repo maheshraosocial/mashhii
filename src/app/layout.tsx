@@ -15,9 +15,10 @@ export const metadata: Metadata = {
   // Static title — no template, so all pages show only "Mashhii"
   title: "Mashhii",
   description: "Your personal operating system",
-  // favicon served from public/favicon.ico via explicit link tag
+  // Valid ICO served from public/ — version param busts stale browser cache
   icons: {
-    icon: [{ url: "/favicon.ico", sizes: "any" }],
+    icon: [{ url: "/favicon.ico?v=2", sizes: "any", type: "image/x-icon" }],
+    shortcut: "/favicon.ico?v=2",
   },
   robots: {
     index: false,

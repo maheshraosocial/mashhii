@@ -2,18 +2,16 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
-  // Building2, // Rent — DISABLED
   Receipt,
   CheckSquare,
-  // TrendingUp, // Finance — DISABLED
-  // TrendingDown, // Finance — DISABLED
   Flame,
   Target,
   FolderKanban,
   Bell,
   ArrowRight,
-  // IndianRupee, // Rent — DISABLED
   Lightbulb,
+  FileText,
+  Building2,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +20,6 @@ import { Progress } from "@/components/ui/progress";
 import { StatsCard } from "@/components/shared/stats-card";
 import { InboxWidget } from "@/components/dashboard/inbox-widget";
 import { formatCurrency, formatDate, getMonthYear, safeDecimalToNumber } from "@/lib/utils";
-import { Metadata } from "next";
-
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -34,138 +30,154 @@ export default async function DashboardPage() {
   const year = now.getFullYear();
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+  const todayStart = new Date(year, month - 1, now.getDate());
+  const todayEnd = new Date(year, month - 1, now.getDate(), 23, 59, 59);
 
-  // Parallel data fetching for performance
+  // Parallel data fetching — ordered by priority: Tasks, Habits, Goals, Ideas, then secondary
   const [
-    // rentPayments, // Rent — DISABLED
-    bills,
     tasks,
     habits,
     habitEntries,
-    projects,
+    todayHabitEntries,
     goals,
-    reminders,
-    // income, // Finance — DISABLED
-    // expenses, // Finance — DISABLED
-    recentCaptures,
+    recentIdeas,
     ideasCount,
-  ] = await Promise.all([
+    reminders,
+    bills,
+    projects,
+    recentCaptures,
     // Rent DISABLED — keep for future re-enablement
-    // db.rentPayment.findMany({
-    //   where: { month, year },
-    //   include: { property: { select: { type: true, name: true } } },
-    // }),
-    db.bill.findMany({
-      where: { status: { in: ["PENDING", "OVERDUE"] } },
-      orderBy: { dueDate: "asc" },
-      take: 5,
-    }),
+    // rentPayments,
+  ] = await Promise.all([
+    // 1. Tasks — primary focus
     db.task.findMany({
       where: { status: { in: ["TODO", "IN_PROGRESS"] } },
-      orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
-      take: 5,
+      orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
+      take: 8,
     }),
+    // 2. Habits — daily action
     db.habit.findMany({ where: { isActive: true }, orderBy: { order: "asc" } }),
+    // Habit monthly entries (for rate)
     db.habitEntry.findMany({
-      where: {
-        date: { gte: startOfMonth, lte: endOfMonth },
-        completed: true,
-      },
+      where: { date: { gte: startOfMonth, lte: endOfMonth }, completed: true },
     }),
-    db.project.findMany({
-      where: { status: { in: ["PLANNING", "DEVELOPMENT", "TESTING"] } },
-      orderBy: { updatedAt: "desc" },
-      take: 4,
+    // Habit today entries (for per-habit status)
+    db.habitEntry.findMany({
+      where: { date: { gte: todayStart, lte: todayEnd }, completed: true },
     }),
+    // 3. Goals
     db.goal.findMany({
       where: { status: "ACTIVE" },
       orderBy: { completionPercent: "desc" },
       take: 4,
     }),
+    // 4. Ideas — recent captures
+    db.idea.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 4,
+      select: { id: true, title: true, status: true, priority: true },
+    }),
+    db.idea.count(),
+    // 5. Reminders
     db.reminder.findMany({
       where: {
         status: "ACTIVE",
         dueDate: { lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
       },
       orderBy: { dueDate: "asc" },
-      take: 5,
+      take: 4,
     }),
-    // Finance DISABLED — keep for future re-enablement
-    // db.income.aggregate({
-    //   where: { date: { gte: startOfMonth, lte: endOfMonth } },
-    //   _sum: { amount: true },
-    // }),
-    // db.expense.aggregate({
-    //   where: { date: { gte: startOfMonth, lte: endOfMonth } },
-    //   _sum: { amount: true },
-    // }),
+    // 6. Bills
+    db.bill.findMany({
+      where: { status: { in: ["PENDING", "OVERDUE"] } },
+      orderBy: { dueDate: "asc" },
+      take: 4,
+    }),
+    // 7. Projects (secondary)
+    db.project.findMany({
+      where: { status: { in: ["PLANNING", "DEVELOPMENT", "TESTING"] } },
+      orderBy: { updatedAt: "desc" },
+      take: 3,
+    }),
+    // Inbox captures
     db.quickCapture.findMany({
       where: { status: "INBOX" },
       orderBy: { createdAt: "desc" },
       take: 4,
     }),
-    db.idea.count(),
   ]);
 
-  // Rent DISABLED
-  // const billablePayments = rentPayments.filter((p) => p.property.type !== "OTHER");
-  // const totalExpectedRent = billablePayments.reduce(...);
-  // const collectedRent = ...;
-  // const pendingRent = ...;
+  // ── Derived stats ────────────────────────────────────────────
 
-  // Finance DISABLED
-  // const monthlyIncome = safeDecimalToNumber(income._sum.amount);
-  // const monthlyExpenses = safeDecimalToNumber(expenses._sum.amount);
-  // const monthlySavings = monthlyIncome - monthlyExpenses;
+  // Tasks
+  const today = todayStart;
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tasksDueToday = tasks.filter(
+    (t) => t.dueDate && t.dueDate >= today && t.dueDate < tomorrow
+  ).length;
+  const urgentTasks = tasks.filter((t) => t.priority === "URGENT" || t.priority === "HIGH").length;
 
   // Habits
   const totalPossibleEntries = habits.length * now.getDate();
   const habitCompletionRate = totalPossibleEntries > 0
     ? Math.round((habitEntries.length / totalPossibleEntries) * 100)
     : 0;
-
-  // Tasks due today
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tasksDueToday = tasks.filter(
-    (t) => t.dueDate && t.dueDate >= today && t.dueDate < tomorrow
-  ).length;
+  const habitsCompletedToday = todayHabitEntries.length;
+  const habitsLeftToday = habits.length - habitsCompletedToday;
 
   const greetingHour = now.getHours();
   const greeting =
     greetingHour < 12 ? "Good morning" :
     greetingHour < 17 ? "Good afternoon" : "Good evening";
 
+  // Motivational insight
+  const insight =
+    habitsLeftToday === 0 && habits.length > 0 ? "🎉 All habits done today!" :
+    habitsLeftToday === 1 ? "⚡ 1 habit left today" :
+    habitsLeftToday > 1 ? `⚡ ${habitsLeftToday} habits left today` :
+    tasksDueToday > 0 ? `📋 ${tasksDueToday} task${tasksDueToday > 1 ? "s" : ""} due today` :
+    "✨ You're on track";
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">
-          {greeting}, {session.user?.name?.split(" ")[0]} 👋
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {getMonthYear(month, year)} — Here&apos;s your overview
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">
+            {greeting}, {session.user?.name?.split(" ")[0]} 👋
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {getMonthYear(month, year)} — {insight}
+          </p>
+        </div>
       </div>
 
-      {/* Primary stats */}
+      {/* Primary stats — priority order: Tasks, Habits, Goals, Ideas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Rent DISABLED
-        <StatsCard title="Rent Collected" ... href="/rentals" />
-        <StatsCard title="Rent Pending" ... href="/rentals" />
-        */}
-        {/* Finance DISABLED
-        <StatsCard title="Monthly Income" ... href="/finance" />
-        */}
         <StatsCard
-          title="Bills Pending"
-          value={bills.length}
-          subtitle={`${bills.filter((b) => b.status === "OVERDUE").length} overdue`}
-          icon={Receipt}
-          iconColor={bills.some((b) => b.status === "OVERDUE") ? "text-red-400" : "text-yellow-400"}
-          href="/bills"
+          title="Tasks Due Today"
+          value={tasksDueToday}
+          subtitle={urgentTasks > 0 ? `${urgentTasks} urgent/high priority` : `${tasks.length} open total`}
+          icon={CheckSquare}
+          iconColor="text-violet-400"
+          href="/tasks"
+        />
+        <StatsCard
+          title="Habits Today"
+          value={`${habitsCompletedToday}/${habits.length}`}
+          subtitle={`${habitCompletionRate}% monthly rate`}
+          icon={Flame}
+          iconColor="text-orange-400"
+          href="/habits"
+        />
+        <StatsCard
+          title="Active Goals"
+          value={goals.length}
+          subtitle="Being tracked"
+          icon={Target}
+          iconColor="text-emerald-400"
+          href="/goals"
         />
         <StatsCard
           title="Ideas"
@@ -177,23 +189,15 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Secondary stats */}
+      {/* Secondary stats — Bills, Projects, Reminders, Rentals */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
-          title="Tasks Due Today"
-          value={tasksDueToday}
-          subtitle={`${tasks.length} open total`}
-          icon={CheckSquare}
-          iconColor="text-violet-400"
-          href="/tasks"
-        />
-        <StatsCard
-          title="Habit Rate"
-          value={`${habitCompletionRate}%`}
-          subtitle={`${habitEntries.length} completions this month`}
-          icon={Flame}
-          iconColor="text-orange-400"
-          href="/habits"
+          title="Bills Pending"
+          value={bills.length}
+          subtitle={`${bills.filter((b) => b.status === "OVERDUE").length} overdue`}
+          icon={Receipt}
+          iconColor={bills.some((b) => b.status === "OVERDUE") ? "text-red-400" : "text-yellow-400"}
+          href="/bills"
         />
         <StatsCard
           title="Active Projects"
@@ -204,63 +208,86 @@ export default async function DashboardPage() {
           href="/projects"
         />
         <StatsCard
-          title="Active Goals"
-          value={goals.length}
-          subtitle="Being tracked"
-          icon={Target}
-          iconColor="text-emerald-400"
-          href="/goals"
+          title="Reminders"
+          value={reminders.length}
+          subtitle="Due this week"
+          icon={Bell}
+          iconColor="text-pink-400"
+          href="/reminders"
+        />
+        {/* Rent DISABLED — placeholder keeps grid stable
+        <StatsCard title="Rent" ... href="/rentals" />
+        */}
+        <StatsCard
+          title="Capture Inbox"
+          value={recentCaptures.length}
+          subtitle="Unprocessed items"
+          icon={FileText}
+          iconColor="text-sky-400"
+          href="/capture"
         />
       </div>
 
-      {/* Main content grid */}
+      {/* ── Main content grid ──────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Left column — Bills + Goals */}
+        {/* ── Left column (2/3) — Tasks · Goals · Projects ── */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Rent DISABLED — keep for future re-enablement */}
-          {/* <Card>Rent Collection</Card> */}
-
-          {/* Upcoming bills */}
+          {/* TASKS — most prominent, expanded list */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Upcoming Bills</CardTitle>
-              <Link href="/bills" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-violet-400" />
+                <CardTitle>Open Tasks</CardTitle>
+                {tasks.length > 0 && (
+                  <Badge variant="outline" className="text-xs ml-1">{tasks.length}</Badge>
+                )}
+              </div>
+              <Link href="/tasks" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
                 View all <ArrowRight className="h-3 w-3" />
               </Link>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {bills.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No pending bills
-                </p>
+            <CardContent className="space-y-0">
+              {tasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">🎉 All tasks done!</p>
               ) : (
-                bills.slice(0, 5).map((bill) => (
-                  <div key={bill.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                    <div>
-                      <p className="text-sm font-medium">{bill.name}</p>
-                      <p className="text-xs text-muted-foreground">Due: {formatDate(bill.dueDate)}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {bill.amount && (
-                        <span className="text-sm tabular-nums">{formatCurrency(safeDecimalToNumber(bill.amount))}</span>
-                      )}
-                      <Badge variant={bill.status === "OVERDUE" ? "error" : "warning"}>
-                        {bill.status}
+                tasks.slice(0, 8).map((task) => {
+                  const isOverdue = task.dueDate && task.dueDate < today;
+                  const isDueToday = task.dueDate && task.dueDate >= today && task.dueDate < tomorrow;
+                  return (
+                    <div key={task.id} className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+                      <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
+                        task.priority === "URGENT" ? "bg-red-400" :
+                        task.priority === "HIGH" ? "bg-orange-400" :
+                        task.priority === "MEDIUM" ? "bg-blue-400" : "bg-zinc-500"
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground truncate">{task.title}</p>
+                        {task.dueDate && (
+                          <p className={`text-xs mt-0.5 ${isOverdue ? "text-red-400" : isDueToday ? "text-orange-400" : "text-muted-foreground"}`}>
+                            {isOverdue ? "Overdue · " : isDueToday ? "Due today · " : ""}{formatDate(task.dueDate)}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0 capitalize">
+                        {task.status === "IN_PROGRESS" ? "In Progress" : task.status.toLowerCase().replace("_", " ")}
                       </Badge>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </CardContent>
           </Card>
 
-          {/* Goals progress */}
+          {/* GOALS PROGRESS */}
           {goals.length > 0 && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Goals Progress</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-emerald-400" />
+                  <CardTitle>Goals Progress</CardTitle>
+                </div>
                 <Link href="/goals" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
                   View all <ArrowRight className="h-3 w-3" />
                 </Link>
@@ -276,8 +303,45 @@ export default async function DashboardPage() {
                         {goal.targetValue ? ` / ${safeDecimalToNumber(goal.targetValue)}${goal.unit ? ` ${goal.unit}` : ""}` : ""}
                       </span>
                     </div>
-                    <Progress value={goal.completionPercent} className="h-1.5" />
-                    <p className="text-xs text-muted-foreground mt-1">{goal.completionPercent}% complete</p>
+                    <Progress value={goal.completionPercent ?? 0} className="h-1.5" />
+                    <p className="text-xs text-muted-foreground mt-1">{goal.completionPercent ?? 0}% complete</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* IDEAS PIPELINE — Ideas → Goals → Projects → Tasks */}
+          {recentIdeas.length > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-yellow-400" />
+                  <CardTitle>Recent Ideas</CardTitle>
+                  <span className="text-xs text-muted-foreground ml-1">→ Goals → Projects → Tasks</span>
+                </div>
+                <Link href="/ideas" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                  View all <ArrowRight className="h-3 w-3" />
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {recentIdeas.map((idea) => (
+                  <div key={idea.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                    <p className="text-sm text-foreground truncate flex-1 pr-3">{idea.title}</p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {idea.status.toLowerCase()}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          idea.priority === "HIGH" ? "text-orange-400 border-orange-400/30" :
+                          idea.priority === "LOW" ? "text-zinc-400" : ""
+                        }`}
+                      >
+                        {idea.priority.toLowerCase()}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -285,77 +349,63 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Right column — Tasks, Habits, Reminders */}
+        {/* ── Right column (1/3) — Habits · Reminders · Bills ── */}
         <div className="space-y-6">
 
-          {/* Open tasks */}
+          {/* HABITS TODAY */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Open Tasks</CardTitle>
-              <Link href="/tasks" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-                View all <ArrowRight className="h-3 w-3" />
-              </Link>
-            </CardHeader>
-            <CardContent className="space-y-1.5">
-              {tasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">All tasks done!</p>
-              ) : (
-                tasks.slice(0, 5).map((task) => (
-                  <div key={task.id} className="flex items-start gap-2 py-1.5 border-b border-border last:border-0">
-                    <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${
-                      task.priority === "URGENT" ? "bg-red-400" :
-                      task.priority === "HIGH" ? "bg-orange-400" :
-                      task.priority === "MEDIUM" ? "bg-blue-400" : "bg-zinc-400"
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground truncate">{task.title}</p>
-                      {task.dueDate && (
-                        <p className="text-xs text-muted-foreground">{formatDate(task.dueDate)}</p>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Habit tracker */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Habits — Today</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-orange-400" />
+                <CardTitle>Habits Today</CardTitle>
+              </div>
               <Link href="/habits" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
                 View all <ArrowRight className="h-3 w-3" />
               </Link>
             </CardHeader>
             <CardContent>
-              <div className="mb-3">
-                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                  <span>Monthly completion</span>
-                  <span>{habitCompletionRate}%</span>
-                </div>
-                <Progress value={habitCompletionRate} className="h-1.5" />
-              </div>
-              <div className="space-y-1.5">
-                {habits.slice(0, 6).map((habit) => {
-                  const todayEntry = habitEntries.find(
-                    (e) => e.habitId === habit.id && new Date(e.date).toDateString() === new Date().toDateString()
-                  );
-                  return (
-                    <div key={habit.id} className="flex items-center gap-2">
-                      <div className={`h-2 w-2 rounded-full shrink-0 ${todayEntry?.completed ? "bg-green-400" : "bg-muted"}`} />
-                      <span className="text-sm text-foreground">{habit.icon} {habit.name}</span>
+              {habits.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No habits yet</p>
+              ) : (
+                <>
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                      <span>{habitsCompletedToday} of {habits.length} done</span>
+                      <span className="font-medium">{habits.length > 0 ? Math.round((habitsCompletedToday / habits.length) * 100) : 0}%</span>
                     </div>
-                  );
-                })}
-              </div>
+                    <Progress
+                      value={habits.length > 0 ? (habitsCompletedToday / habits.length) * 100 : 0}
+                      className="h-2"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    {habits.slice(0, 7).map((habit) => {
+                      const done = todayHabitEntries.some((e) => e.habitId === habit.id);
+                      return (
+                        <div key={habit.id} className="flex items-center gap-2.5">
+                          <div className={`h-2 w-2 rounded-full shrink-0 transition-colors ${done ? "bg-green-400" : "bg-muted-foreground/30"}`} />
+                          <span className={`text-sm flex-1 ${done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                            {habit.icon && <span className="mr-1">{habit.icon}</span>}
+                            {habit.name}
+                          </span>
+                          {done && <span className="text-xs text-green-400">✓</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
-          {/* Upcoming reminders */}
+          {/* REMINDERS */}
           {reminders.length > 0 && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Reminders</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-pink-400" />
+                  <CardTitle>Reminders</CardTitle>
+                </div>
                 <Link href="/reminders" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
                   View all <ArrowRight className="h-3 w-3" />
                 </Link>
@@ -364,8 +414,8 @@ export default async function DashboardPage() {
                 {reminders.map((reminder) => (
                   <div key={reminder.id} className="flex items-start gap-2 py-1.5 border-b border-border last:border-0">
                     <Bell className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-sm text-foreground">{reminder.title}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground truncate">{reminder.title}</p>
                       <p className="text-xs text-muted-foreground">{formatDate(reminder.dueDate)}</p>
                     </div>
                   </div>
@@ -374,10 +424,47 @@ export default async function DashboardPage() {
             </Card>
           )}
 
-          {/* Quick captures */}
+          {/* BILLS */}
+          {bills.length > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-yellow-400" />
+                  <CardTitle>Upcoming Bills</CardTitle>
+                </div>
+                <Link href="/bills" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                  View all <ArrowRight className="h-3 w-3" />
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {bills.slice(0, 4).map((bill) => (
+                  <div key={bill.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <p className="text-sm font-medium truncate">{bill.name}</p>
+                      <p className="text-xs text-muted-foreground">Due: {formatDate(bill.dueDate)}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {bill.amount && (
+                        <span className="text-xs tabular-nums">{formatCurrency(safeDecimalToNumber(bill.amount))}</span>
+                      )}
+                      <Badge variant={bill.status === "OVERDUE" ? "error" : "warning"} className="text-xs">
+                        {bill.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* INBOX — quick captures */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Inbox {recentCaptures.length > 0 && <span className="text-xs font-normal text-muted-foreground ml-1">({recentCaptures.length})</span>}</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle>
+                Inbox{recentCaptures.length > 0 && (
+                  <span className="text-xs font-normal text-muted-foreground ml-1.5">({recentCaptures.length})</span>
+                )}
+              </CardTitle>
               <Link href="/capture" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
                 View all <ArrowRight className="h-3 w-3" />
               </Link>
