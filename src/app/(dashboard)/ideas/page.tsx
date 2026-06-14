@@ -11,7 +11,7 @@ export default async function IdeasPage() {
   if (!session) redirect("/login");
 
   const ideas = await db.idea.findMany({
-    orderBy: [{ priority: "desc" }, { rating: "desc" }, { createdAt: "desc" }],
+    orderBy: { createdAt: "desc" },
   });
 
   return (

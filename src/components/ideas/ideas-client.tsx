@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, MoreHorizontal, Star } from "lucide-react";
+import { Plus, MoreHorizontal, Star, Lightbulb, Rocket, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,11 +23,60 @@ interface IdeasClientProps {
   ideas: Idea[];
 }
 
+type FilterType = "all" | "planning" | "in_progress" | "launched" | "dropped";
+
+const STATUS_ORDER: Record<IdeaStatus, number> = {
+  IDEA: 1,
+  RESEARCHING: 2,
+  PLANNING: 3,
+  BUILDING: 4,
+  LAUNCHED: 5,
+  DROPPED: 6,
+};
+
 export function IdeasClient({ ideas }: IdeasClientProps) {
   const [addDialog, setAddDialog] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [form, setForm] = useState({ title: "", description: "", priority: "MEDIUM" as IdeaPriority, rating: "5", tags: "" });
+
+  // Filter ideas by status
+  const filteredIdeas = useMemo(() => {
+    let filtered = ideas;
+
+    if (activeFilter === "planning") {
+      filtered = ideas.filter((idea) => ["IDEA", "RESEARCHING", "PLANNING"].includes(idea.status));
+    } else if (activeFilter === "in_progress") {
+      filtered = ideas.filter((idea) => idea.status === "BUILDING");
+    } else if (activeFilter === "launched") {
+      filtered = ideas.filter((idea) => idea.status === "LAUNCHED");
+    } else if (activeFilter === "dropped") {
+      filtered = ideas.filter((idea) => idea.status === "DROPPED");
+    }
+
+    // Sort by status order, then priority, then rating
+    return filtered.sort((a, b) => {
+      const statusDiff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+      if (statusDiff !== 0) return statusDiff;
+      
+      const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      return (b.rating || 0) - (a.rating || 0);
+    });
+  }, [ideas, activeFilter]);
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    const planning = ideas.filter((i) => ["IDEA", "RESEARCHING", "PLANNING"].includes(i.status)).length;
+    const inProgress = ideas.filter((i) => i.status === "BUILDING").length;
+    const launched = ideas.filter((i) => i.status === "LAUNCHED").length;
+    const dropped = ideas.filter((i) => i.status === "DROPPED").length;
+
+    return { total: ideas.length, planning, inProgress, launched, dropped };
+  }, [ideas]);
 
   const handleAdd = async () => {
     if (!form.title) { toast.error("Title is required"); return; }
@@ -63,18 +112,104 @@ export function IdeasClient({ ideas }: IdeasClientProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Ideas ({ideas.length})</h2>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Lightbulb className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs font-medium text-muted-foreground">Total Ideas</p>
+            </div>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Lightbulb className="h-4 w-4 text-yellow-400" />
+              <p className="text-xs font-medium text-muted-foreground">Planning</p>
+            </div>
+            <p className="text-2xl font-bold">{stats.planning}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Rocket className="h-4 w-4 text-violet-400" />
+              <p className="text-xs font-medium text-muted-foreground">In Progress</p>
+            </div>
+            <p className="text-2xl font-bold">{stats.inProgress}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle2 className="h-4 w-4 text-green-400" />
+              <p className="text-xs font-medium text-muted-foreground">Launched</p>
+            </div>
+            <p className="text-2xl font-bold">{stats.launched}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <XCircle className="h-4 w-4 text-red-400" />
+              <p className="text-xs font-medium text-muted-foreground">Dropped</p>
+            </div>
+            <p className="text-2xl font-bold">{stats.dropped}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant={activeFilter === "all" ? "default" : "outline"}
+            onClick={() => setActiveFilter("all")}
+          >
+            All ({ideas.length})
+          </Button>
+          <Button
+            size="sm"
+            variant={activeFilter === "planning" ? "default" : "outline"}
+            onClick={() => setActiveFilter("planning")}
+          >
+            Planning ({stats.planning})
+          </Button>
+          <Button
+            size="sm"
+            variant={activeFilter === "in_progress" ? "default" : "outline"}
+            onClick={() => setActiveFilter("in_progress")}
+          >
+            In Progress ({stats.inProgress})
+          </Button>
+          <Button
+            size="sm"
+            variant={activeFilter === "launched" ? "default" : "outline"}
+            onClick={() => setActiveFilter("launched")}
+          >
+            Launched ({stats.launched})
+          </Button>
+          <Button
+            size="sm"
+            variant={activeFilter === "dropped" ? "default" : "outline"}
+            onClick={() => setActiveFilter("dropped")}
+          >
+            Dropped ({stats.dropped})
+          </Button>
+        </div>
         <Button size="sm" onClick={() => setAddDialog(true)}>
           <Plus className="h-4 w-4 mr-1.5" /> Capture Idea
         </Button>
       </div>
 
-      {ideas.length === 0 ? (
-        <EmptyState icon={Plus} title="No ideas yet" description="Capture your first idea before it slips away" action={{ label: "Capture Idea", onClick: () => setAddDialog(true) }} />
+      {filteredIdeas.length === 0 ? (
+        <EmptyState icon={Plus} title="No ideas here" description={activeFilter === "all" ? "Capture your first idea before it slips away" : "No ideas match this filter"} action={activeFilter === "all" ? { label: "Capture Idea", onClick: () => setAddDialog(true) } : undefined} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ideas.map((idea) => (
+          {filteredIdeas.map((idea) => (
             <Card key={idea.id} className="hover:border-primary/50 transition-colors">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
