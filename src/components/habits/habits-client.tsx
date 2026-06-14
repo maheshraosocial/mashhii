@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useTransition } from "react";
+import { useState, useCallback, useMemo, useTransition, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Plus,
@@ -263,7 +263,8 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
     [today]
   );
 
-  const [doneTodayIds, setDoneTodayIds] = useState<Set<string>>(() =>
+  // Use props directly, recalculate doneTodayIds when habits change
+  const doneTodayIdsFromProps = useMemo(() =>
     new Set(
       initialHabits
         .filter((h) =>
@@ -274,10 +275,18 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
           )
         )
         .map((h) => h.id)
-    )
+    ),
+    [initialHabits, today]
   );
 
-  const [habits] = useState(initialHabits);
+  const [doneTodayIds, setDoneTodayIds] = useState<Set<string>>(doneTodayIdsFromProps);
+
+  // Sync doneTodayIds when props change (after page revalidation)
+  useEffect(() => {
+    setDoneTodayIds(doneTodayIdsFromProps);
+  }, [doneTodayIdsFromProps]);
+
+  const habits = initialHabits; // Use props directly instead of local state
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterTab>("today");

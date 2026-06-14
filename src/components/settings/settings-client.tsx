@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { signOut } from "next-auth/react";
-import { LogOut, User, Palette, Database, Monitor, Sun, Moon, Check } from "lucide-react";
+import { LogOut, User, Palette, Database, Monitor, Sun, Moon, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -59,17 +59,39 @@ const BG_THEMES = [
   { id: "lavender-fields",  label: "Lavender Fields", preview: "bg-purple-50 dark:bg-purple-900" },
 ] as const;
 
+const PREMIUM_THEMES = [
+  { id: "default", label: "Default", preview: "bg-gradient-to-br from-purple-500 to-purple-600", description: "Classic Mashhii" },
+  { id: "ios-glass", label: "iOS Liquid Glass", preview: "bg-gradient-to-br from-blue-400 to-blue-600", description: "Smooth & translucent" },
+  { id: "harry-potter", label: "Harry Potter", preview: "bg-gradient-to-br from-amber-700 to-red-800", description: "Magical & mystical" },
+  { id: "avengers", label: "Avengers", preview: "bg-gradient-to-br from-red-600 to-gray-800", description: "Heroic & bold" },
+  { id: "batman", label: "Batman Dark Knight", preview: "bg-gradient-to-br from-gray-900 to-yellow-500", description: "Dark & powerful" },
+  { id: "iron-man", label: "Iron Man", preview: "bg-gradient-to-br from-red-500 to-yellow-400", description: "Tech & energy" },
+  { id: "barbie", label: "Barbie Dream", preview: "bg-gradient-to-br from-pink-400 to-pink-600", description: "Dreamy & vibrant" },
+  { id: "cyberpunk", label: "Cyberpunk Neon", preview: "bg-gradient-to-br from-purple-600 to-cyan-400", description: "Futuristic & electric" },
+  { id: "lotr", label: "Lord of the Rings", preview: "bg-gradient-to-br from-amber-600 to-yellow-700", description: "Epic & legendary" },
+  { id: "space", label: "Space Galaxy", preview: "bg-gradient-to-br from-indigo-900 to-purple-600", description: "Cosmic & infinite" },
+  { id: "ocean", label: "Ocean Breeze", preview: "bg-gradient-to-br from-cyan-400 to-blue-600", description: "Calm & refreshing" },
+  { id: "forest", label: "Forest Retreat", preview: "bg-gradient-to-br from-green-600 to-emerald-700", description: "Natural & peaceful" },
+  { id: "minimal-white", label: "Minimal White", preview: "bg-gradient-to-br from-gray-100 to-gray-300", description: "Clean & minimal" },
+  { id: "midnight", label: "Midnight Black", preview: "bg-gradient-to-br from-gray-900 to-black", description: "Deep & elegant" },
+  { id: "royal-purple", label: "Royal Purple", preview: "bg-gradient-to-br from-purple-600 to-purple-800", description: "Regal & majestic" },
+  { id: "sakura", label: "Sakura Blossom", preview: "bg-gradient-to-br from-pink-300 to-pink-500", description: "Delicate & beautiful" },
+] as const;
+
 export function SettingsClient({ user }: SettingsClientProps) {
   const { theme, setTheme } = useTheme();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [accentColor, setAccentColorState] = useState("purple");
   const [bgTheme, setBgThemeState] = useState("default");
+  const [premiumTheme, setPremiumThemeState] = useState("default");
 
   useEffect(() => {
     const stored = localStorage.getItem("mashhii-accent");
     if (stored) setAccentColorState(stored);
     const storedBg = localStorage.getItem("mashhii-bg");
     if (storedBg) setBgThemeState(storedBg);
+    const storedTheme = localStorage.getItem("mashhii-premium-theme");
+    if (storedTheme) setPremiumThemeState(storedTheme);
   }, []);
 
   const setAccentColor = (color: string) => {
@@ -90,6 +112,20 @@ export function SettingsClient({ user }: SettingsClientProps) {
     } else {
       document.documentElement.setAttribute("data-bg", bg);
     }
+  };
+
+  const setPremiumTheme = (themeId: string) => {
+    setPremiumThemeState(themeId);
+    localStorage.setItem("mashhii-premium-theme", themeId);
+    
+    // Apply theme instantly
+    if (themeId === "default") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", themeId);
+    }
+    
+    toast.success(`Theme changed to ${PREMIUM_THEMES.find(t => t.id === themeId)?.label || themeId}`);
   };
 
   const handleSignOut = async () => {
@@ -208,6 +244,48 @@ export function SettingsClient({ user }: SettingsClientProps) {
               ))}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Premium Themes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" /> Premium Themes
+          </CardTitle>
+          <CardDescription>✨ Complete visual transformations - instantly change your entire workspace</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {PREMIUM_THEMES.map(({ id, label, preview, description }) => (
+              <button
+                key={id}
+                onClick={() => setPremiumTheme(id)}
+                className={`group relative flex flex-col gap-2 rounded-xl border-2 p-3 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                  premiumTheme === id
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-muted-foreground/40 hover:bg-accent"
+                }`}
+              >
+                <div className={`h-12 w-full rounded-lg ${preview} flex items-center justify-center relative overflow-hidden`}>
+                  {premiumTheme === id && (
+                    <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] flex items-center justify-center">
+                      <Check className="h-6 w-6 text-white drop-shadow-lg" strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className={`text-sm font-medium ${premiumTheme === id ? "text-primary" : "text-foreground"}`}>
+                    {label}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">{description}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-4 text-center">
+            Premium themes transform colors, backgrounds, cards, buttons, and navigation instantly
+          </p>
         </CardContent>
       </Card>
 

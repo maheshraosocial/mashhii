@@ -11,13 +11,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  // Static title — no template, so all pages show only "Mashhii"
   title: "Mashhii",
   description: "Your personal operating system",
-  // Valid ICO served from public/ — version param busts stale browser cache
   icons: {
-    icon: [{ url: "/favicon.ico?v=2", sizes: "any", type: "image/x-icon" }],
-    shortcut: "/favicon.ico?v=2",
+    icon: [
+      { url: "/logo.jpg", sizes: "any", type: "image/jpeg" },
+      { url: "/favicon.ico", sizes: "any", type: "image/x-icon" },
+    ],
+    shortcut: "/logo.jpg",
+    apple: "/logo.jpg",
   },
   robots: {
     index: false,
@@ -41,9 +43,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* Restore accent color + background theme before first paint to avoid flash */}
+      {/* Restore accent color + background theme + premium theme before first paint to avoid flash */}
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `try{var c=localStorage.getItem('mashhii-accent');if(c&&c!=='purple')document.documentElement.setAttribute('data-color',c);var bg=localStorage.getItem('mashhii-bg');if(bg&&bg!=='default')document.documentElement.setAttribute('data-bg',bg);}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{var c=localStorage.getItem('mashhii-accent');if(c&&c!=='purple')document.documentElement.setAttribute('data-color',c);var bg=localStorage.getItem('mashhii-bg');if(bg&&bg!=='default')document.documentElement.setAttribute('data-bg',bg);var t=localStorage.getItem('mashhii-premium-theme');if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);}catch(e){}` }} />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
