@@ -722,8 +722,8 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
         onConfirm={handleDelete}
         title="Delete Habit?"
         description="This will permanently delete this habit and all its data. This action cannot be undone."
-        confirmText="Delete"
-        isPending={isPending}
+        confirmLabel="Delete"
+        destructive
       />
     </div>
   );
