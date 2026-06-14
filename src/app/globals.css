@@ -136,6 +136,140 @@
   --sidebar-accent: 172 66% 45%;
 }
 
+/* ✨ Whimsical Accent Colors ✨ */
+
+[data-color="lavender"] {
+  --primary: 270 67% 47%;
+  --ring: 270 67% 47%;
+  --sidebar-accent: 270 67% 47%;
+}
+.dark[data-color="lavender"] {
+  --primary: 270 67% 60%;
+  --ring: 270 67% 60%;
+  --sidebar-accent: 270 67% 60%;
+}
+
+[data-color="mint"] {
+  --primary: 156 73% 38%;
+  --ring: 156 73% 38%;
+  --sidebar-accent: 156 73% 38%;
+}
+.dark[data-color="mint"] {
+  --primary: 156 73% 48%;
+  --ring: 156 73% 48%;
+  --sidebar-accent: 156 73% 48%;
+}
+
+[data-color="coral"] {
+  --primary: 16 85% 58%;
+  --ring: 16 85% 58%;
+  --sidebar-accent: 16 85% 58%;
+}
+.dark[data-color="coral"] {
+  --primary: 16 85% 65%;
+  --ring: 16 85% 65%;
+  --sidebar-accent: 16 85% 65%;
+}
+
+[data-color="honey"] {
+  --primary: 45 93% 47%;
+  --ring: 45 93% 47%;
+  --sidebar-accent: 45 93% 47%;
+}
+.dark[data-color="honey"] {
+  --primary: 45 93% 58%;
+  --ring: 45 93% 58%;
+  --sidebar-accent: 45 93% 58%;
+}
+
+[data-color="cherry"] {
+  --primary: 348 86% 61%;
+  --ring: 348 86% 61%;
+  --sidebar-accent: 348 86% 61%;
+}
+.dark[data-color="cherry"] {
+  --primary: 348 86% 68%;
+  --ring: 348 86% 68%;
+  --sidebar-accent: 348 86% 68%;
+}
+
+[data-color="periwinkle"] {
+  --primary: 234 89% 74%;
+  --ring: 234 89% 74%;
+  --sidebar-accent: 234 89% 74%;
+}
+.dark[data-color="periwinkle"] {
+  --primary: 234 89% 78%;
+  --ring: 234 89% 78%;
+  --sidebar-accent: 234 89% 78%;
+}
+
+[data-color="sky"] {
+  --primary: 199 95% 70%;
+  --ring: 199 95% 70%;
+  --sidebar-accent: 199 95% 70%;
+}
+.dark[data-color="sky"] {
+  --primary: 199 95% 75%;
+  --ring: 199 95% 75%;
+  --sidebar-accent: 199 95% 75%;
+}
+
+[data-color="emerald"] {
+  --primary: 160 84% 39%;
+  --ring: 160 84% 39%;
+  --sidebar-accent: 160 84% 39%;
+}
+.dark[data-color="emerald"] {
+  --primary: 160 84% 48%;
+  --ring: 160 84% 48%;
+  --sidebar-accent: 160 84% 48%;
+}
+
+[data-color="ruby"] {
+  --primary: 350 89% 48%;
+  --ring: 350 89% 48%;
+  --sidebar-accent: 350 89% 48%;
+}
+.dark[data-color="ruby"] {
+  --primary: 350 89% 58%;
+  --ring: 350 89% 58%;
+  --sidebar-accent: 350 89% 58%;
+}
+
+[data-color="sapphire"] {
+  --primary: 217 91% 60%;
+  --ring: 217 91% 60%;
+  --sidebar-accent: 217 91% 60%;
+}
+.dark[data-color="sapphire"] {
+  --primary: 217 91% 68%;
+  --ring: 217 91% 68%;
+  --sidebar-accent: 217 91% 68%;
+}
+
+[data-color="peach"] {
+  --primary: 25 95% 63%;
+  --ring: 25 95% 63%;
+  --sidebar-accent: 25 95% 63%;
+}
+.dark[data-color="peach"] {
+  --primary: 25 95% 70%;
+  --ring: 25 95% 70%;
+  --sidebar-accent: 25 95% 70%;
+}
+
+[data-color="lilac"] {
+  --primary: 282 65% 68%;
+  --ring: 282 65% 68%;
+  --sidebar-accent: 282 65% 68%;
+}
+.dark[data-color="lilac"] {
+  --primary: 282 65% 75%;
+  --ring: 282 65% 75%;
+  --sidebar-accent: 282 65% 75%;
+}
+
 /* ── Background Themes (data-bg) ─────────────────────────────── */
 /* Subtle hue shifts on bg/card/sidebar, like Linear / Notion     */
 
@@ -227,6 +361,188 @@
   --border: 35 16% 14%;
   --input: 35 16% 14%;
   --muted: 35 16% 13%;
+}
+
+/* ✨ Magical Background Themes ✨ */
+
+/* ── Aurora ── */
+[data-bg="aurora"] {
+  --background: 280 40% 97%;
+  --card: 280 40% 99%;
+  --sidebar-background: 280 40% 94%;
+  --border: 280 30% 90%;
+  --input: 280 30% 90%;
+  --muted: 280 30% 94%;
+}
+.dark[data-bg="aurora"] {
+  --background: 280 35% 8%;
+  --card: 280 35% 11%;
+  --sidebar-background: 280 35% 6%;
+  --border: 280 28% 16%;
+  --input: 280 28% 16%;
+  --muted: 280 28% 14%;
+}
+
+/* ── Twilight ── */
+[data-bg="twilight"] {
+  --background: 250 30% 96%;
+  --card: 250 30% 98%;
+  --sidebar-background: 250 30% 92%;
+  --border: 250 25% 88%;
+  --input: 250 25% 88%;
+  --muted: 250 25% 92%;
+}
+.dark[data-bg="twilight"] {
+  --background: 250 25% 9%;
+  --card: 250 25% 12%;
+  --sidebar-background: 250 25% 7%;
+  --border: 250 20% 16%;
+  --input: 250 20% 16%;
+  --muted: 250 20% 14%;
+}
+
+/* ── Moonlight ── */
+[data-bg="moonlight"] {
+  --background: 210 25% 97%;
+  --card: 210 25% 99%;
+  --sidebar-background: 210 25% 93%;
+  --border: 210 20% 90%;
+  --input: 210 20% 90%;
+  --muted: 210 20% 93%;
+}
+.dark[data-bg="moonlight"] {
+  --background: 210 22% 9%;
+  --card: 210 22% 12%;
+  --sidebar-background: 210 22% 7%;
+  --border: 210 18% 16%;
+  --input: 210 18% 16%;
+  --muted: 210 18% 14%;
+}
+
+/* ── Sunrise ── */
+[data-bg="sunrise"] {
+  --background: 30 45% 97%;
+  --card: 30 45% 99%;
+  --sidebar-background: 30 45% 93%;
+  --border: 30 35% 89%;
+  --input: 30 35% 89%;
+  --muted: 30 35% 93%;
+}
+.dark[data-bg="sunrise"] {
+  --background: 25 30% 9%;
+  --card: 25 30% 12%;
+  --sidebar-background: 25 30% 7%;
+  --border: 25 25% 16%;
+  --input: 25 25% 16%;
+  --muted: 25 25% 14%;
+}
+
+/* ── Cosmic ── */
+[data-bg="cosmic"] {
+  --background: 270 22% 96%;
+  --card: 270 22% 98%;
+  --sidebar-background: 270 22% 92%;
+  --border: 270 18% 88%;
+  --input: 270 18% 88%;
+  --muted: 270 18% 92%;
+}
+.dark[data-bg="cosmic"] {
+  --background: 265 24% 7%;
+  --card: 265 24% 10%;
+  --sidebar-background: 265 24% 5%;
+  --border: 265 20% 14%;
+  --input: 265 20% 14%;
+  --muted: 265 20% 12%;
+}
+
+/* ── Enchanted Forest ── */
+[data-bg="forest-enchanted"] {
+  --background: 155 25% 96%;
+  --card: 155 25% 98%;
+  --sidebar-background: 155 25% 92%;
+  --border: 155 20% 88%;
+  --input: 155 20% 88%;
+  --muted: 155 20% 92%;
+}
+.dark[data-bg="forest-enchanted"] {
+  --background: 160 22% 8%;
+  --card: 160 22% 11%;
+  --sidebar-background: 160 22% 6%;
+  --border: 160 18% 15%;
+  --input: 160 18% 15%;
+  --muted: 160 18% 13%;
+}
+
+/* ── Cherry Blossom ── */
+[data-bg="cherry-blossom"] {
+  --background: 345 35% 97%;
+  --card: 345 35% 99%;
+  --sidebar-background: 345 35% 94%;
+  --border: 345 28% 90%;
+  --input: 345 28% 90%;
+  --muted: 345 28% 94%;
+}
+.dark[data-bg="cherry-blossom"] {
+  --background: 345 25% 9%;
+  --card: 345 25% 12%;
+  --sidebar-background: 345 25% 7%;
+  --border: 345 20% 16%;
+  --input: 345 20% 16%;
+  --muted: 345 20% 14%;
+}
+
+/* ── Ocean Breeze ── */
+[data-bg="ocean-breeze"] {
+  --background: 195 35% 96%;
+  --card: 195 35% 98%;
+  --sidebar-background: 195 35% 92%;
+  --border: 195 28% 88%;
+  --input: 195 28% 88%;
+  --muted: 195 28% 92%;
+}
+.dark[data-bg="ocean-breeze"] {
+  --background: 200 28% 8%;
+  --card: 200 28% 11%;
+  --sidebar-background: 200 28% 6%;
+  --border: 200 24% 15%;
+  --input: 200 24% 15%;
+  --muted: 200 24% 13%;
+}
+
+/* ── Golden Hour ── */
+[data-bg="golden-hour"] {
+  --background: 42 50% 96%;
+  --card: 42 50% 98%;
+  --sidebar-background: 42 50% 92%;
+  --border: 42 40% 88%;
+  --input: 42 40% 88%;
+  --muted: 42 40% 92%;
+}
+.dark[data-bg="golden-hour"] {
+  --background: 40 35% 9%;
+  --card: 40 35% 12%;
+  --sidebar-background: 40 35% 7%;
+  --border: 40 28% 16%;
+  --input: 40 28% 16%;
+  --muted: 40 28% 14%;
+}
+
+/* ── Lavender Fields ── */
+[data-bg="lavender-fields"] {
+  --background: 265 35% 97%;
+  --card: 265 35% 99%;
+  --sidebar-background: 265 35% 93%;
+  --border: 265 28% 89%;
+  --input: 265 28% 89%;
+  --muted: 265 28% 93%;
+}
+.dark[data-bg="lavender-fields"] {
+  --background: 265 28% 8%;
+  --card: 265 28% 11%;
+  --sidebar-background: 265 28% 6%;
+  --border: 265 24% 15%;
+  --input: 265 24% 15%;
+  --muted: 265 24% 13%;
 }
 
 /* ── Base Styles ────────────────────────────────────────────── */

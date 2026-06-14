@@ -24,6 +24,19 @@ const ACCENT_COLORS = [
   { id: "rose",   label: "Rose",    dot: "bg-rose-500"   },
   { id: "amber",  label: "Amber",   dot: "bg-amber-500"  },
   { id: "teal",   label: "Teal",    dot: "bg-teal-500"   },
+  // ✨ Whimsical colors
+  { id: "lavender", label: "Lavender", dot: "bg-violet-400" },
+  { id: "mint",     label: "Mint",     dot: "bg-emerald-400" },
+  { id: "coral",    label: "Coral",    dot: "bg-orange-400" },
+  { id: "honey",    label: "Honey",    dot: "bg-yellow-400" },
+  { id: "cherry",   label: "Cherry",   dot: "bg-pink-500" },
+  { id: "periwinkle", label: "Periwinkle", dot: "bg-indigo-300" },
+  { id: "sky",      label: "Sky",      dot: "bg-sky-300" },
+  { id: "emerald",  label: "Emerald",  dot: "bg-emerald-500" },
+  { id: "ruby",     label: "Ruby",     dot: "bg-red-600" },
+  { id: "sapphire", label: "Sapphire", dot: "bg-blue-500" },
+  { id: "peach",    label: "Peach",    dot: "bg-orange-300" },
+  { id: "lilac",    label: "Lilac",    dot: "bg-purple-300" },
 ] as const;
 
 const BG_THEMES = [
@@ -33,6 +46,17 @@ const BG_THEMES = [
   { id: "green",     label: "Green",    preview: "bg-green-50 dark:bg-green-950"    },
   { id: "purple-bg", label: "Purple",   preview: "bg-purple-50 dark:bg-purple-950"  },
   { id: "amber-bg",  label: "Amber",    preview: "bg-amber-50 dark:bg-amber-950"    },
+  // ✨ Magical backgrounds
+  { id: "aurora",           label: "Aurora",          preview: "bg-purple-100 dark:bg-purple-950" },
+  { id: "twilight",         label: "Twilight",        preview: "bg-indigo-50 dark:bg-indigo-950" },
+  { id: "moonlight",        label: "Moonlight",       preview: "bg-blue-50 dark:bg-slate-900" },
+  { id: "sunrise",          label: "Sunrise",         preview: "bg-orange-50 dark:bg-orange-950" },
+  { id: "cosmic",           label: "Cosmic",          preview: "bg-violet-50 dark:bg-violet-950" },
+  { id: "forest-enchanted", label: "Enchanted",       preview: "bg-emerald-50 dark:bg-emerald-950" },
+  { id: "cherry-blossom",   label: "Cherry Blossom",  preview: "bg-pink-50 dark:bg-pink-950" },
+  { id: "ocean-breeze",     label: "Ocean Breeze",    preview: "bg-cyan-50 dark:bg-cyan-950" },
+  { id: "golden-hour",      label: "Golden Hour",     preview: "bg-yellow-50 dark:bg-yellow-950" },
+  { id: "lavender-fields",  label: "Lavender Fields", preview: "bg-purple-50 dark:bg-purple-900" },
 ] as const;
 
 export function SettingsClient({ user }: SettingsClientProps) {
@@ -101,7 +125,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
           <CardTitle className="flex items-center gap-2">
             <Palette className="h-5 w-5" /> Appearance
           </CardTitle>
-          <CardDescription>Customize the look and feel of your dashboard</CardDescription>
+          <CardDescription>✨ Customize your magical workspace with beautiful themes and colors</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Brightness mode */}
@@ -136,8 +160,8 @@ export function SettingsClient({ user }: SettingsClientProps) {
 
           {/* Background theme */}
           <div>
-            <Label className="mb-3 block text-sm font-medium">Background</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <Label className="mb-3 block text-sm font-medium">Background Theme</Label>
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
               {BG_THEMES.map(({ id, label, preview }) => (
                 <button
                   key={id}
@@ -151,7 +175,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
                   <div className={`h-8 w-full rounded ${preview} border border-border/40 flex items-center justify-center`}>
                     {bgTheme === id && <Check className="h-3.5 w-3.5 text-primary" />}
                   </div>
-                  <span className={`text-[11px] font-medium ${bgTheme === id ? "text-primary" : "text-muted-foreground"}`}>
+                  <span className={`text-[11px] font-medium text-center ${bgTheme === id ? "text-primary" : "text-muted-foreground"}`}>
                     {label}
                   </span>
                 </button>
@@ -164,7 +188,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
           {/* Accent color */}
           <div>
             <Label className="mb-3 block text-sm font-medium">Accent Color</Label>
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-3">
               {ACCENT_COLORS.map(({ id, label, dot }) => (
                 <button
                   key={id}
@@ -177,7 +201,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
                   }`}>
                     {accentColor === id && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                   </div>
-                  <span className={`text-[11px] ${accentColor === id ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                  <span className={`text-[11px] text-center leading-tight ${accentColor === id ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                     {label}
                   </span>
                 </button>
