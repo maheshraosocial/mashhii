@@ -2,19 +2,19 @@ import { db } from "@/lib/db";
 import { Flame } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { HabitsClient } from "@/components/habits/habits-client";
-import { subDays, startOfDay } from "date-fns";
+import { startOfMonth, startOfDay } from "date-fns";
 
 export const revalidate = 0; // Force dynamic rendering
 
 export default async function HabitsPage() {
-  // 90 days for best-streak calculation
-  const ninetyDaysAgo = startOfDay(subDays(new Date(), 90));
+  // Fetch entries from the start of current month
+  const currentMonthStart = startOfDay(startOfMonth(new Date()));
 
   // Fetch ALL habits (active + paused) so users can resume paused ones
   const habits = await db.habit.findMany({
     include: {
       entries: {
-        where: { date: { gte: ninetyDaysAgo } },
+        where: { date: { gte: currentMonthStart } },
         orderBy: { date: "asc" },
       },
     },

@@ -260,97 +260,142 @@ export function TasksClient({ tasks }: TasksClientProps) {
           })}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {tasks.map((task) => {
             const s = task.status as TaskStatus;
             const meta = COLUMN_META[s] ?? COLUMN_META.TODO;
             const Icon = meta.icon;
             const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && s !== "COMPLETED" && s !== "CANCELLED";
+            const isCompleted = s === "COMPLETED";
             return (
-              <Card key={task.id} className={`${meta.borderL} hover:shadow-sm transition-all`}>
-                <CardContent className="flex items-center gap-3 p-3">
-                  {/* Status icon */}
-                  <Icon className={`h-5 w-5 shrink-0 ${meta.color}`} />
+              <Card key={task.id} className={`${meta.borderL} hover:shadow-md transition-all group`}>
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    {/* Status icon - clickable for quick toggle */}
+                    <button
+                      onClick={() => handleStatusChange(task.id, isCompleted ? "TODO" : s === "TODO" ? "IN_PROGRESS" : "COMPLETED")}
+                      className={`mt-0.5 shrink-0 ${meta.color} hover:opacity-70 transition-all`}
+                      title={isCompleted ? "Reopen" : s === "TODO" ? "Start" : "Complete"}
+                    >
+                      <Icon className="h-6 w-6" />
+                    </button>
 
-                  {/* Title + meta */}
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium leading-snug ${
-                      s === "COMPLETED" ? "line-through text-muted-foreground" : ""
-                    }`}>
-                      {task.title}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${getPriorityColor(task.priority)}`}>
-                        {TASK_PRIORITY_LABELS[task.priority as TaskPriority]}
-                      </span>
-                      {task.dueDate && (
-                        <span className={`text-xs ${
-                          isOverdue ? "text-red-400 font-medium" : "text-muted-foreground"
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Title */}
+                      <h3 className={`text-base font-semibold mb-1.5 ${
+                        isCompleted ? "line-through text-muted-foreground" : "text-foreground"
+                      }`}>
+                        {task.title}
+                      </h3>
+
+                      {/* Description preview */}
+                      {task.description && (
+                        <p className={`text-sm mb-3 line-clamp-2 ${
+                          isCompleted ? "text-muted-foreground/70" : "text-muted-foreground"
                         }`}>
-                          {isOverdue ? "⚠ " : ""}Due {formatDate(task.dueDate)}
-                        </span>
+                          {task.description}
+                        </p>
                       )}
-                      <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${meta.badge}`}>
-                        {TASK_STATUS_LABELS[s]}
-                      </span>
+
+                      {/* Meta row */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Status badge */}
+                        <Badge variant="outline" className={`text-xs font-medium ${meta.badge} border-0`}>
+                          {TASK_STATUS_LABELS[s]}
+                        </Badge>
+
+                        {/* Priority */}
+                        <Badge variant="outline" className={`text-xs font-medium ${getPriorityColor(task.priority)} border-0`}>
+                          {TASK_PRIORITY_LABELS[task.priority as TaskPriority]}
+                        </Badge>
+
+                        {/* Due date */}
+                        {task.dueDate && (
+                          <span className={`text-xs font-medium px-2 py-1 rounded-md ${
+                            isOverdue 
+                              ? "bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400" 
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {isOverdue ? "⚠️ Overdue: " : "📅 "}{formatDate(task.dueDate)}
+                          </span>
+                        )}
+
+                        {/* Tags */}
+                        {task.tags && task.tags.length > 0 && (
+                          <div className="flex gap-1.5 flex-wrap">
+                            {task.tags.slice(0, 3).map((tag, idx) => (
+                              <span
+                                key={idx}
+                                className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                            {task.tags.length > 3 && (
+                              <span className="text-xs text-muted-foreground">+{task.tags.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Inline actions */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {/* Status transition */}
-                    {s === "TODO" && (
+                    {/* Actions - show on hover */}
+                    <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Status transition */}
+                      {s === "TODO" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
+                          onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
+                        >
+                          <ChevronRight className="h-4 w-4" /> Start
+                        </Button>
+                      )}
+                      {s === "IN_PROGRESS" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
+                          onClick={() => handleStatusChange(task.id, "COMPLETED")}
+                        >
+                          <Check className="h-4 w-4" /> Complete
+                        </Button>
+                      )}
+                      {s === "COMPLETED" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-xs gap-1.5"
+                          onClick={() => handleStatusChange(task.id, "TODO")}
+                        >
+                          <RotateCcw className="h-4 w-4" /> Reopen
+                        </Button>
+                      )}
+
+                      {/* Edit */}
                       <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs gap-1 text-blue-600 border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-950"
-                        onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
-                      >
-                        <ChevronRight className="h-3.5 w-3.5" /> Start
-                      </Button>
-                    )}
-                    {s === "IN_PROGRESS" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs gap-1 text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950"
-                        onClick={() => handleStatusChange(task.id, "COMPLETED")}
-                      >
-                        <Check className="h-3.5 w-3.5" /> Done
-                      </Button>
-                    )}
-                    {s === "COMPLETED" && (
-                      <Button
-                        size="sm"
                         variant="ghost"
-                        className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleStatusChange(task.id, "TODO")}
+                        size="icon"
+                        className="h-8 w-8 hover:bg-muted"
+                        onClick={() => setEditTask(task)}
+                        title="Edit task"
                       >
-                        <RotateCcw className="h-3.5 w-3.5" /> Reopen
+                        <Pencil className="h-4 w-4" />
                       </Button>
-                    )}
 
-                    {/* Edit */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      onClick={() => setEditTask(task)}
-                      title="Edit"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-
-                    {/* Delete */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      onClick={() => setDeleteId(task.id)}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                      {/* Delete */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleteId(task.id)}
+                        title="Delete task"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

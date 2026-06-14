@@ -13,6 +13,23 @@ async function requireAuth() {
   if (!session) redirect("/login");
 }
 
+/**
+ * Auto-cleanup: Delete completed tasks older than 7 days
+ */
+export async function cleanupOldTasks(): Promise<void> {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  await db.task.deleteMany({
+    where: {
+      status: "COMPLETED",
+      completedAt: {
+        lt: sevenDaysAgo,
+      },
+    },
+  });
+}
+
 export async function createTask(data: unknown): Promise<ActionResultVoid> {
   await requireAuth();
 

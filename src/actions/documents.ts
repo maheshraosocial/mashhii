@@ -20,6 +20,7 @@ export async function uploadDocument(formData: FormData): Promise<ActionResultVo
   const category = formData.get("category") as string;
   const description = formData.get("description") as string | null;
   const propertyId = formData.get("propertyId") as string | null;
+  const expiryDateRaw = formData.get("expiryDate") as string | null;
   const tagsRaw = formData.get("tags") as string | null;
   const tags = tagsRaw ? JSON.parse(tagsRaw) : [];
 
@@ -47,6 +48,7 @@ export async function uploadDocument(formData: FormData): Promise<ActionResultVo
       tags,
       description: description || null,
       propertyId: propertyId || null,
+      expiryDate: expiryDateRaw ? new Date(expiryDateRaw) : null,
     },
   });
 

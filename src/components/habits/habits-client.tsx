@@ -400,7 +400,7 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
 
   const calendarData = useMemo(() => {
     const end = today;
-    const start = subDays(end, 90);
+    const start = startOfDay(new Date(today.getFullYear(), today.getMonth(), 1));
     const days = eachDayOfInterval({ start, end });
 
     return days.map(day => {
@@ -660,7 +660,7 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">90-Day Progress</h3>
+                <h3 className="font-semibold">This Month&apos;s Progress</h3>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>Less</span>
@@ -680,7 +680,7 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
             </div>
 
             <div className="flex flex-wrap gap-1">
-              {calendarData.slice(-91).map((data, i) => {
+              {calendarData.map((data, i) => {
                 const intensity = data.percentage;
                 return (
                   <div
