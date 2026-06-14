@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { HabitsClient } from "@/components/habits/habits-client";
 import { subDays, startOfDay } from "date-fns";
 
+export const revalidate = 0; // Force dynamic rendering
+
 export default async function HabitsPage() {
   // 90 days for best-streak calculation
   const ninetyDaysAgo = startOfDay(subDays(new Date(), 90));
