@@ -14,7 +14,7 @@ export default async function SettingsPage() {
         icon={Settings}
         iconColor="text-muted-foreground"
       />
-      <SettingsClient user={session.user ?? null} />
+      <SettingsClient user={session?.user ?? null} />
     </div>
   );
 }
