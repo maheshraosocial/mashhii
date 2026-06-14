@@ -116,7 +116,31 @@ export default async function DashboardPage() {
   ).length;
   const urgentTasks = tasks.filter((t) => t.priority === "URGENT" || t.priority === "HIGH").length;
 
-  // Habits
+  // Habits — enhanced with streak tracking
+  const habitsWithEnriched = habits.map(habit => {
+    const entries = habitEntries.filter(e => e.habitId === habit.id && e.completed);
+    
+    // Calculate current streak
+    const completedDates = entries.map(e => e.date.getTime()).sort((a, b) => b - a);
+    let currentStreak = 0;
+    let checkDate = todayStart.getTime();
+    
+    for (const date of completedDates) {
+      if (date === checkDate || date === checkDate - 86400000) {
+        currentStreak++;
+        checkDate = date - 86400000;
+      } else {
+        break;
+      }
+    }
+    
+    return { ...habit, currentStreak };
+  });
+  
+  const allStreaks = habitsWithEnriched.map(h => h.currentStreak);
+  const bestCurrentStreak = Math.max(0, ...allStreaks);
+  const longestEverStreak = Math.max(0, ...habits.map(h => h.bestStreak ?? 0));
+  
   const totalPossibleEntries = habits.length * now.getDate();
   const habitCompletionRate = totalPossibleEntries > 0
     ? Math.round((habitEntries.length / totalPossibleEntries) * 100)
@@ -380,7 +404,7 @@ export default async function DashboardPage() {
         {/* ── Right column (1/3) — Habits · Reminders · Bills ── */}
         <div className="space-y-6">
 
-          {/* #2 HABITS TODAY */}
+          {/* #2 HABITS TODAY — Enhanced with streaks */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div className="flex items-center gap-2">
@@ -396,18 +420,37 @@ export default async function DashboardPage() {
                 <p className="text-sm text-muted-foreground text-center py-4">No habits yet</p>
               ) : (
                 <>
+                  {/* Stats Row */}
+                  <div className="grid grid-cols-3 gap-2 mb-4 pb-3 border-b border-border">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-foreground">{habitsCompletedToday}/{habits.length}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Today</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-orange-500">{bestCurrentStreak}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Streak</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-yellow-500">{longestEverStreak}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Best</div>
+                    </div>
+                  </div>
+
+                  {/* Progress */}
                   <div className="mb-3">
                     <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                      <span>{habitsCompletedToday} of {habits.length} done</span>
-                      <span className="font-medium">{habits.length > 0 ? Math.round((habitsCompletedToday / habits.length) * 100) : 0}%</span>
+                      <span>Daily Progress</span>
+                      <span className="font-medium tabular-nums">{habits.length > 0 ? Math.round((habitsCompletedToday / habits.length) * 100) : 0}%</span>
                     </div>
                     <Progress
                       value={habits.length > 0 ? (habitsCompletedToday / habits.length) * 100 : 0}
                       className="h-2"
                     />
                   </div>
+
+                  {/* Habit List */}
                   <div className="space-y-1.5">
-                    {habits.slice(0, 7).map((habit) => {
+                    {habitsWithEnriched.slice(0, 6).map((habit) => {
                       const done = todayHabitEntries.some((e) => e.habitId === habit.id);
                       return (
                         <div key={habit.id} className="flex items-center gap-2.5">
@@ -416,6 +459,12 @@ export default async function DashboardPage() {
                             {habit.icon && <span className="mr-1">{habit.icon}</span>}
                             {habit.name}
                           </span>
+                          {habit.currentStreak > 0 && (
+                            <span className="text-xs text-orange-500 font-medium flex items-center gap-0.5">
+                              <Flame className="h-3 w-3" />
+                              {habit.currentStreak}
+                            </span>
+                          )}
                           {done && <span className="text-xs text-green-400">✓</span>}
                         </div>
                       );

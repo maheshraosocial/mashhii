@@ -146,6 +146,17 @@ enum GoalCategory {
   PROPERTY
 }
 
+enum HabitCategory {
+  HEALTH
+  FITNESS
+  READING
+  FINANCE
+  LEARNING
+  PRODUCTIVITY
+  MINDFULNESS
+  CUSTOM
+}
+
 enum ReminderStatus {
   ACTIVE
   COMPLETED
@@ -427,20 +438,24 @@ model Idea {
 // ═══════════════════════════════════════════════════════════════
 
 model Habit {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  icon        String?
-  color       String   @default("#6366f1")
-  targetDays  Int      @default(7)
-  isActive    Boolean  @default(true)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String          @id @default(cuid())
+  name             String
+  description      String?
+  icon             String?
+  color            String          @default("#6366f1")
+  category         HabitCategory?
+  targetDays       Int             @default(7)
+  isActive         Boolean         @default(true)
+  order            Int             @default(0)
+  bestStreak       Int             @default(0)
+  totalCompletions Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   entries HabitEntry[]
 
   @@index([isActive])
+  @@index([category])
 }
 
 model HabitEntry {
