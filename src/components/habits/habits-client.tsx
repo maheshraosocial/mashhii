@@ -679,13 +679,13 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-13 gap-1">
+            <div className="flex flex-wrap gap-1">
               {calendarData.slice(-91).map((data, i) => {
                 const intensity = data.percentage;
                 return (
                   <div
                     key={i}
-                    className="aspect-square rounded-sm transition-all hover:ring-2 hover:ring-primary cursor-pointer"
+                    className="h-3 w-3 rounded-sm transition-all hover:ring-2 hover:ring-primary cursor-pointer"
                     style={{
                       backgroundColor:
                         intensity === 0
