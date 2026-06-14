@@ -1,9 +1,10 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
+import type { Session } from "next-auth";
 import { useState, useEffect } from "react";
 import {
   Menu,
@@ -30,6 +31,7 @@ import { initials } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/constants";
 
 interface TopNavProps {
+  session: Session | null;
   onSearchOpen?: () => void;
 }
 
@@ -88,8 +90,7 @@ function Breadcrumb() {
   );
 }
 
-export function TopNav({ onSearchOpen }: TopNavProps) {
-  const { data: session } = useSession();
+export function TopNav({ session, onSearchOpen }: TopNavProps) {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);

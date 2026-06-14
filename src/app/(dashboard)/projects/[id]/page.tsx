@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { FolderKanban } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ProjectDetailClient } from "@/components/projects/project-detail-client";
@@ -17,9 +16,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProjectDetailPage({ params }: Props) {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   const { id } = await params;
 
   const project = await db.project.findUnique({

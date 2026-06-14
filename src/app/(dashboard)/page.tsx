@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import {
   Receipt,
   CheckSquare,
@@ -23,7 +22,6 @@ import { formatCurrency, formatDate, getMonthYear, safeDecimalToNumber } from "@
 
 export default async function DashboardPage() {
   const session = await auth();
-  if (!session) redirect("/login");
 
   const now = new Date();
   const month = now.getMonth() + 1;
@@ -131,6 +129,8 @@ export default async function DashboardPage() {
     greetingHour < 12 ? "Good morning" :
     greetingHour < 17 ? "Good afternoon" : "Good evening";
 
+  const userName = session?.user?.name?.split(" ")[0] ?? "there";
+
   // Motivational insight
   const insight =
     habitsLeftToday === 0 && habits.length > 0 ? "🎉 All habits done today!" :
@@ -145,7 +145,7 @@ export default async function DashboardPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">
-            {greeting}, {session.user?.name?.split(" ")[0]} 👋
+            {greeting}, {userName} 👋
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {getMonthYear(month, year)} — {insight}

@@ -1,15 +1,9 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { Receipt } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { BillsClient } from "@/components/bills/bills-client";
 
-
 export default async function BillsPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   const bills = await db.bill.findMany({
     orderBy: [{ status: "asc" }, { dueDate: "asc" }],
   });

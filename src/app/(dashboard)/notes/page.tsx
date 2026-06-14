@@ -1,15 +1,9 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { NotesClient } from "@/components/notes/notes-client";
 
-
 export default async function NotesPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   const notes = await db.note.findMany({
     where: { isArchived: false },
     orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],

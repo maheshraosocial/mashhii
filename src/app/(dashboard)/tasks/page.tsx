@@ -1,15 +1,9 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { CheckSquare } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { TasksClient } from "@/components/tasks/tasks-client";
 
-
 export default async function TasksPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   const [tasks, captures] = await Promise.all([
     db.task.findMany({
       orderBy: [{ order: "asc" }, { priority: "desc" }, { createdAt: "desc" }],

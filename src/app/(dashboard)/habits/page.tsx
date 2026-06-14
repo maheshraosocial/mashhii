@@ -1,16 +1,10 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { Flame } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { HabitsClient } from "@/components/habits/habits-client";
 import { subDays, startOfDay } from "date-fns";
 
-
 export default async function HabitsPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   // 90 days for best-streak calculation
   const ninetyDaysAgo = startOfDay(subDays(new Date(), 90));
 

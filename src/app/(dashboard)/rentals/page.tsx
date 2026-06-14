@@ -1,16 +1,10 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { RentalsClient } from "@/components/rentals/rentals-client";
 import { ensureCurrentMonthPayments } from "@/actions/rentals";
 
-
 export default async function RentalsPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   // Auto-create this month's payment records for all tenanted properties
   await ensureCurrentMonthPayments();
 

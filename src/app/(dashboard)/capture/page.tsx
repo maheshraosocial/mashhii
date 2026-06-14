@@ -1,15 +1,9 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { Inbox } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { CapturesClient } from "@/components/captures/captures-client";
 
-
 export default async function CapturesPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   const captures = await db.quickCapture.findMany({
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });

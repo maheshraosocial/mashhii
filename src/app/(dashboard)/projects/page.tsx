@@ -1,15 +1,9 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { FolderKanban } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ProjectsClient } from "@/components/projects/projects-client";
 
-
 export default async function ProjectsPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   const projects = await db.project.findMany({
     include: { milestones: { orderBy: { order: "asc" } } },
     orderBy: { updatedAt: "desc" },
