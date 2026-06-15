@@ -309,12 +309,19 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
 
   // ─── Calculations ─────────────────────────────────────────────────────────
 
-  const today = useMemo(() => startOfDay(new Date()), []);
+  // Use UTC date to match database storage
+  const today = useMemo(() => {
+    const now = new Date();
+    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  }, []);
   
   const stats = useMemo(() => {
     const activeHabits = habits.filter(h => h.isActive);
     const todayEntries = activeHabits.filter(h =>
-      h.entries.some(e => isSameDay(e.date, today) && e.completed)
+      h.entries.some(e => {
+        const entryDate = new Date(e.date);
+        return entryDate.getTime() === today.getTime() && e.completed;
+      })
     );
     
     const allStreaks = activeHabits.map(h => calculateCurrentStreak(h.entries));
@@ -340,11 +347,12 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
       const currentStreak = calculateCurrentStreak(habit.entries);
       const completionRate = calculateCompletionRate(
         habit.entries,
-        differenceInDays(today, habit.createdAt) + 1
+        differenceInDays(new Date(), habit.createdAt) + 1
       );
-      const isCompletedToday = habit.entries.some(
-        e => isSameDay(e.date, today) && e.completed
-      );
+      const isCompletedToday = habit.entries.some(e => {
+        const entryDate = new Date(e.date);
+        return entryDate.getTime() === today.getTime() && e.completed;
+      });
       const lastCompleted = habit.entries
         .filter(e => e.completed)
         .sort((a, b) => b.date.getTime() - a.date.getTime())[0]?.date;
@@ -399,20 +407,22 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
   // ─── Calendar Heatmap Data ────────────────────────────────────────────────
 
   const calendarData = useMemo(() => {
-    const end = today;
-    const start = startOfDay(new Date(today.getFullYear(), today.getMonth(), 1));
+    const now = new Date();
+    const end = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
     const days = eachDayOfInterval({ start, end });
 
     return days.map(day => {
+      const dayTime = day.getTime();
       const completed = enrichedHabits.filter(h =>
-        h.entries.some(e => isSameDay(e.date, day) && e.completed)
+        h.entries.some(e => new Date(e.date).getTime() === dayTime && e.completed)
       ).length;
       const total = enrichedHabits.length;
       const percentage = total > 0 ? (completed / total) * 100 : 0;
 
       return { day, completed, total, percentage };
     });
-  }, [enrichedHabits, today]);
+  }, [enrichedHabits]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 

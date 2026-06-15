@@ -26,10 +26,11 @@ export default async function DashboardPage() {
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
-  const startOfMonth = new Date(year, month - 1, 1);
-  const endOfMonth = new Date(year, month, 0, 23, 59, 59);
-  const todayStart = new Date(year, month - 1, now.getDate());
-  const todayEnd = new Date(year, month - 1, now.getDate(), 23, 59, 59);
+  const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
+  const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+  // Use UTC for today to match database storage
+  const todayStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const todayEnd = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59));
 
   // Parallel data fetching — ordered by priority: Tasks, Habits, Goals, Ideas, then secondary
   const [
@@ -120,8 +121,8 @@ export default async function DashboardPage() {
   const habitsWithEnriched = habits.map(habit => {
     const entries = habitEntries.filter(e => e.habitId === habit.id && e.completed);
     
-    // Calculate current streak
-    const completedDates = entries.map(e => e.date.getTime()).sort((a, b) => b - a);
+    // Calculate current streak using UTC dates
+    const completedDates = entries.map(e => new Date(e.date).getTime()).sort((a, b) => b - a);
     let currentStreak = 0;
     let checkDate = todayStart.getTime();
     

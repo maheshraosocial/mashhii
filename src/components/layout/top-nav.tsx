@@ -103,6 +103,27 @@ export function TopNav({ session, onSearchOpen }: TopNavProps) {
   const user = session?.user;
   const userInitials = user?.name ? initials(user.name) : "M";
 
+  // Live clock for Kolkata timezone (IST - UTC+5:30)
+  const [currentTime, setCurrentTime] = useState("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const kolkataTime = new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).format(now);
+      setCurrentTime(kolkataTime);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm flex items-center px-4 gap-3 sticky top-0 z-40">
       {/* Mobile menu */}
@@ -125,6 +146,12 @@ export function TopNav({ session, onSearchOpen }: TopNavProps) {
 
       {/* Right actions */}
       <div className="flex items-center gap-1">
+        {/* Live Clock */}
+        {currentTime && (
+          <div className="hidden lg:flex items-center gap-1.5 px-3 h-8 text-xs font-medium text-muted-foreground border-r border-border mr-1">
+            <span>{currentTime}</span>
+          </div>
+        )}
         <Button
           variant="ghost"
           size="sm"
