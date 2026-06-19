@@ -1,4 +1,6 @@
-import { put, del, list } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
+import { promises as fs } from "fs";
+import path from "path";
 
 export interface StorageUploadResult {
   url: string;
@@ -50,10 +52,52 @@ class VercelBlobStorageProvider implements StorageProvider {
   }
 }
 
-// Export the concrete implementation through the abstract interface.
+/**
+ * Local filesystem storage — used when BLOB_READ_WRITE_TOKEN is not set.
+ * Files are saved to public/uploads/<folder>/ and served as static assets.
+ * Suitable for local development; not for production.
+ */
+class LocalStorageProvider implements StorageProvider {
+  async upload(
+    filename: string,
+    file: Blob | File,
+    options?: { contentType?: string; folder?: string }
+  ): Promise<StorageUploadResult> {
+    const folder = options?.folder ?? "documents";
+    const dir = path.join(process.cwd(), "public", "uploads", folder);
+    await fs.mkdir(dir, { recursive: true });
+
+    const uniqueName = `${Date.now()}_${filename}`;
+    const fullPath = path.join(dir, uniqueName);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await fs.writeFile(fullPath, buffer);
+
+    const url = `/uploads/${folder}/${uniqueName}`;
+    return {
+      url,
+      pathname: `${folder}/${uniqueName}`,
+      contentType: options?.contentType ?? "application/octet-stream",
+      size: file.size,
+    };
+  }
+
+  async delete(url: string): Promise<void> {
+    const relative = url.startsWith("/") ? url.slice(1) : url;
+    const fullPath = path.join(process.cwd(), "public", relative);
+    try {
+      await fs.unlink(fullPath);
+    } catch {
+      // Best-effort: ignore errors (file may already be gone)
+    }
+  }
+}
+
+// Use Vercel Blob in production; fall back to local filesystem in dev.
 // To migrate to Cloudflare R2, replace VercelBlobStorageProvider
 // with an R2StorageProvider class that implements StorageProvider.
-export const storage: StorageProvider = new VercelBlobStorageProvider();
+export const storage: StorageProvider = process.env.BLOB_READ_WRITE_TOKEN
+  ? new VercelBlobStorageProvider()
+  : new LocalStorageProvider();
 
 // ── Helpers ───────────────────────────────────────────────────
 

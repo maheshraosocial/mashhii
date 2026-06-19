@@ -86,6 +86,8 @@ export function TasksClient({ tasks }: TasksClientProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null);
 
   const grouped = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = { TODO: [], IN_PROGRESS: [], COMPLETED: [], CANCELLED: [] };
@@ -140,7 +142,14 @@ export function TasksClient({ tasks }: TasksClientProps) {
     const meta = COLUMN_META[status];
     const isCompleted = status === "COMPLETED";
     return (
-      <Card className={`${meta.border} hover:shadow-sm transition-all`}>
+      <Card
+        className={`${meta.border} hover:shadow-sm transition-all cursor-grab active:cursor-grabbing select-none ${
+          draggedId === task.id ? "opacity-40 scale-95" : ""
+        }`}
+        draggable
+        onDragStart={(e) => { setDraggedId(task.id); e.dataTransfer.effectAllowed = "move"; }}
+        onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
+      >
         <CardContent className="p-3 space-y-2.5">
           {/* Title row */}
           <div className="flex items-start gap-2">
@@ -190,12 +199,20 @@ export function TasksClient({ tasks }: TasksClientProps) {
           {!isCompleted && (
             <div className="flex gap-1.5 pl-6">
               {status === "TODO" && (
-                <button
-                  onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
-                  className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 font-medium transition-colors"
-                >
-                  <ChevronRight className="h-3 w-3" /> Start
-                </button>
+                <>
+                  <button
+                    onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
+                    className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 font-medium transition-colors"
+                  >
+                    <ChevronRight className="h-3 w-3" /> Start
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange(task.id, "COMPLETED")}
+                    className="flex items-center gap-1 text-[11px] text-emerald-500 hover:text-emerald-600 font-medium transition-colors"
+                  >
+                    <Check className="h-3 w-3" /> Done
+                  </button>
+                </>
               )}
               {status === "IN_PROGRESS" && (
                 <button
@@ -236,7 +253,23 @@ export function TasksClient({ tasks }: TasksClientProps) {
             const meta = COLUMN_META[status];
             const Icon = meta.icon;
             return (
-              <div key={status} className={`rounded-xl border border-border/60 overflow-hidden ${meta.colBg}`}>
+              <div
+                key={status}
+                className={`rounded-xl border border-border/60 overflow-hidden ${meta.colBg} transition-all ${
+                  dragOverCol === status && draggedId !== null ? `ring-2 ${meta.ring}` : ""
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setDragOverCol(status); }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (draggedId) {
+                    const dragged = tasks.find((t) => t.id === draggedId);
+                    if (dragged && dragged.status !== status) handleStatusChange(draggedId, status);
+                  }
+                  setDraggedId(null);
+                  setDragOverCol(null);
+                }}
+              >
                 {/* Column header */}
                 <div className={`flex items-center gap-2 px-3 py-2.5 ${meta.headerBg} border-b border-border/40`}>
                   <Icon className={`h-4 w-4 ${meta.color}`} />
@@ -344,14 +377,24 @@ export function TasksClient({ tasks }: TasksClientProps) {
                     <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       {/* Status transition */}
                       {s === "TODO" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
-                          onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
-                        >
-                          <ChevronRight className="h-4 w-4" /> Start
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
+                            onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
+                          >
+                            <ChevronRight className="h-4 w-4" /> Start
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
+                            onClick={() => handleStatusChange(task.id, "COMPLETED")}
+                          >
+                            <Check className="h-4 w-4" /> Done
+                          </Button>
+                        </>
                       )}
                       {s === "IN_PROGRESS" && (
                         <Button

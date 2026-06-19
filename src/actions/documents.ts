@@ -32,28 +32,34 @@ export async function uploadDocument(formData: FormData): Promise<ActionResultVo
   if (!validation.valid) return { success: false, error: validation.error! };
 
   const safeFilename = sanitizeFilename(file.name);
-  const result = await storage.upload(safeFilename, file, {
-    contentType: file.type,
-    folder: "documents",
-  });
 
-  await db.document.create({
-    data: {
-      name: name.trim(),
-      originalName: file.name,
-      category: category as never,
-      fileUrl: result.url,
-      fileSize: file.size,
-      mimeType: file.type,
-      tags,
-      description: description || null,
-      propertyId: propertyId || null,
-      expiryDate: expiryDateRaw ? new Date(expiryDateRaw) : null,
-    },
-  });
+  try {
+    const result = await storage.upload(safeFilename, file, {
+      contentType: file.type,
+      folder: "documents",
+    });
 
-  revalidatePath("/documents");
-  return { success: true };
+    await db.document.create({
+      data: {
+        name: name.trim(),
+        originalName: file.name,
+        category: category as never,
+        fileUrl: result.url,
+        fileSize: file.size,
+        mimeType: file.type,
+        tags,
+        description: description || null,
+        propertyId: propertyId || null,
+        expiryDate: expiryDateRaw ? new Date(expiryDateRaw) : null,
+      },
+    });
+
+    revalidatePath("/documents");
+    return { success: true };
+  } catch (error) {
+    console.error("Document upload error:", error);
+    return { success: false, error: "Upload failed. Please check your storage configuration and try again." };
+  }
 }
 
 export async function deleteDocument(id: string): Promise<ActionResultVoid> {
