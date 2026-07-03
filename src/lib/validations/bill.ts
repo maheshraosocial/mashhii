@@ -10,6 +10,7 @@ export const billSchema = z.object({
   paidAmount: z.number().positive().optional().nullable(),
   status: z.nativeEnum(BillStatus).default("PENDING"),
   isRecurring: z.boolean().default(false),
+  isVariable: z.boolean().default(false),
   recurrence: z.nativeEnum(RecurrenceType).default("NONE"),
   accountLast4: z.string().max(4).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),

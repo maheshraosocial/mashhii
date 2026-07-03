@@ -51,6 +51,7 @@ enum BillCategory {
 }
 
 enum BillStatus {
+  DRAFT
   PENDING
   PAID
   OVERDUE
@@ -338,6 +339,7 @@ model Bill {
   paidAmount   Decimal?       @db.Decimal(10, 2)
   status       BillStatus     @default(PENDING)
   isRecurring  Boolean        @default(false)
+  isVariable   Boolean        @default(false)
   recurrence   RecurrenceType @default(NONE)
   accountLast4 String?
   notes        String?        @db.Text
