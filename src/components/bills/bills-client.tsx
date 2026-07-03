@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, CheckCircle2, AlertCircle, Clock, MoreHorizontal, History } from "lucide-react";
+import { Plus, CheckCircle2, AlertCircle, Clock, MoreHorizontal, History, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,35 +18,91 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { StatsCard } from "@/components/shared/stats-card";
 import { EmptyState } from "@/components/shared/empty-state";
-import { formatCurrency, formatDate, getBillStatusColor } from "@/lib/utils";
-import { createBill, markBillPaid, deleteBill, updateBill } from "@/actions/bills";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { createBill, markBillPaid, deleteBill, updateBill, activateDraftBill } from "@/actions/bills";
 import { BILL_CATEGORY_LABELS } from "@/lib/constants";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { Bill, BillStatus, BillCategory } from "@/types";
 
 interface BillsClientProps {
   bills: Bill[];
-  stats: { pending: number; overdue: number; paid: number; totalPending: number; totalOverdue: number; totalPaid: number };
+  historyBills: Bill[];
+  stats: { 
+    draft: number;
+    pending: number; 
+    overdue: number; 
+    paid: number; 
+    totalDraft: number;
+    totalPending: number; 
+    totalOverdue: number; 
+    totalPaid: number;
+  };
 }
 
-export function BillsClient({ bills, stats }: BillsClientProps) {
+export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
   const [addDialog, setAddDialog] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", category: "OTHER" as BillCategory, amount: "", dueDate: "", isRecurring: false, notes: "" });
-  const [editBill, setEditBill] = useState<{ id: string; name: string; category: BillCategory; amount: string; dueDate: string; isRecurring: boolean; notes: string; status: BillStatus } | null>(null);
+  const [form, setForm] = useState({ 
+    name: "", 
+    category: "OTHER" as BillCategory, 
+    amount: "", 
+    dueDate: "", 
+    isRecurring: false, 
+    isVariable: false,
+    notes: "" 
+  });
+  const [editBill, setEditBill] = useState<{ 
+    id: string; 
+    name: string; 
+    category: BillCategory; 
+    amount: string; 
+    dueDate: string; 
+    isRecurring: boolean; 
+    isVariable: boolean;
+    notes: string; 
+    status: BillStatus 
+  } | null>(null);
   const [historyBillName, setHistoryBillName] = useState<string | null>(null);
+  const [activateDialog, setActivateDialog] = useState<{ id: string; name: string } | null>(null);
+  const [activateAmount, setActivateAmount] = useState("");
 
   const handleAdd = async () => {
     if (!form.name || !form.dueDate) { toast.error("Name and due date are required"); return; }
+    // Variable recurring bills require amount to be specified later via activation
+    if (form.isRecurring && form.isVariable && form.amount) {
+      toast.error("Variable recurring bills should not have an initial amount");
+      return;
+    }
     setIsSubmitting(true);
-    const result = await createBill({ ...form, amount: form.amount ? parseFloat(form.amount) : undefined });
+    const result = await createBill({ 
+      ...form, 
+      amount: form.amount ? parseFloat(form.amount) : undefined,
+      recurrence: form.isRecurring ? "MONTHLY" : undefined,
+    });
     setIsSubmitting(false);
     if (result.success) {
       toast.success("Bill added");
       setAddDialog(false);
-      setForm({ name: "", category: "OTHER", amount: "", dueDate: "", isRecurring: false, notes: "" });
+      setForm({ name: "", category: "OTHER", amount: "", dueDate: "", isRecurring: false, isVariable: false, notes: "" });
     } else { toast.error(result.error); }
+  };
+
+  const handleActivateDraft = async () => {
+    if (!activateDialog || !activateAmount) {
+      toast.error("Please enter the bill amount");
+      return;
+    }
+    setIsSubmitting(true);
+    const result = await activateDraftBill(activateDialog.id, parseFloat(activateAmount));
+    setIsSubmitting(false);
+    if (result.success) {
+      toast.success("Bill activated");
+      setActivateDialog(null);
+      setActivateAmount("");
+    } else {
+      toast.error(result.error);
+    }
   };
 
   const handleMarkPaid = async (id: string) => {
@@ -72,17 +128,21 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
       category: editBill.category,
       amount: editBill.amount ? parseFloat(editBill.amount) : undefined,
       dueDate: new Date(editBill.dueDate),
-      isRecurring: editBill.isRecurring,      status: editBill.status,      notes: editBill.notes || undefined,
+      isRecurring: editBill.isRecurring,
+      isVariable: editBill.isVariable,
+      status: editBill.status,
+      notes: editBill.notes || undefined,
+      recurrence: editBill.isRecurring ? "MONTHLY" : undefined,
     });
     setIsSubmitting(false);
     if (result.success) { toast.success("Bill updated"); setEditBill(null); }
     else toast.error(result.error);
   };
 
-  // History: all PAID records matching the selected bill name
+  // History: all records from historyBills matching the selected bill name
   const historyRecords = historyBillName
-    ? bills
-        .filter((b) => b.status === "PAID" && b.name === historyBillName)
+    ? historyBills
+        .filter((b) => b.name === historyBillName)
         .sort((a, b) => {
           const da = a.paidDate ? new Date(a.paidDate).getTime() : 0;
           const db_ = b.paidDate ? new Date(b.paidDate).getTime() : 0;
@@ -93,6 +153,13 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
   return (
     <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard
+          title="Draft"
+          value={`${stats.draft} ${stats.draft === 1 ? "Bill" : "Bills"}`}
+          subtitle={stats.draft > 0 ? "Awaiting activation" : "All bills activated"}
+          icon={FileText}
+          iconColor="text-violet-400"
+        />
         <StatsCard
           title="Pending"
           value={`${stats.pending} ${stats.pending === 1 ? "Bill" : "Bills"}`}
@@ -108,18 +175,11 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
           iconColor="text-red-400"
         />
         <StatsCard
-          title="Paid"
+          title="Paid (History)"
           value={`${stats.paid} ${stats.paid === 1 ? "Bill" : "Bills"}`}
           subtitle={stats.totalPaid > 0 ? `${formatCurrency(stats.totalPaid)} paid` : "None paid yet"}
           icon={CheckCircle2}
           iconColor="text-green-400"
-        />
-        <StatsCard
-          title="Outstanding"
-          value={formatCurrency(stats.totalPending + stats.totalOverdue)}
-          subtitle={`${stats.pending + stats.overdue} unpaid bills`}
-          icon={AlertCircle}
-          iconColor="text-orange-400"
         />
       </div>
 
@@ -143,18 +203,37 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                     <p className="text-xs text-muted-foreground">
                       {BILL_CATEGORY_LABELS[bill.category]} · Due {formatDate(bill.dueDate)}
                       {bill.isRecurring && " · Recurring"}
+                      {bill.isVariable && " · Variable"}
                       {bill.status === "PAID" && bill.paidDate && ` · Paid ${formatDate(bill.paidDate)}`}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {bill.amount && (
+                  {bill.status !== "DRAFT" && bill.amount && (
                     <span className="text-sm font-medium tabular-nums">{formatCurrency(parseFloat(bill.amount.toString()))}</span>
                   )}
-                  <Badge variant={bill.status === "PAID" ? "success" : bill.status === "OVERDUE" ? "error" : "warning"}>
+                  {bill.status === "DRAFT" && (
+                    <span className="text-xs text-muted-foreground italic">Amount pending</span>
+                  )}
+                  <Badge variant={
+                    bill.status === "DRAFT" ? "violet" : 
+                    bill.status === "PAID" ? "success" : 
+                    bill.status === "OVERDUE" ? "error" : 
+                    "warning"
+                  }>
                     {bill.status.toLowerCase()}
                   </Badge>
-                  {bill.status !== "PAID" && (
+                  {bill.status === "DRAFT" && (
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      className="h-7 text-xs" 
+                      onClick={() => setActivateDialog({ id: bill.id, name: bill.name })}
+                    >
+                      Activate
+                    </Button>
+                  )}
+                  {(bill.status === "PENDING" || bill.status === "OVERDUE") && (
                     <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleMarkPaid(bill.id)}>
                       Mark Paid
                     </Button>
@@ -166,8 +245,18 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditBill({ id: bill.id, name: bill.name, category: bill.category as BillCategory, amount: bill.amount ? bill.amount.toString() : "", dueDate: new Date(bill.dueDate).toISOString().split("T")[0], isRecurring: bill.isRecurring, notes: bill.notes ?? "", status: bill.status as BillStatus })}>Edit</DropdownMenuItem>
-                      {bill.status === "PAID" && (
+                      <DropdownMenuItem onClick={() => setEditBill({ 
+                        id: bill.id, 
+                        name: bill.name, 
+                        category: bill.category as BillCategory, 
+                        amount: bill.amount ? bill.amount.toString() : "", 
+                        dueDate: new Date(bill.dueDate).toISOString().split("T")[0], 
+                        isRecurring: bill.isRecurring, 
+                        isVariable: bill.isVariable ?? false,
+                        notes: bill.notes ?? "", 
+                        status: bill.status as BillStatus 
+                      })}>Edit</DropdownMenuItem>
+                      {bill.isRecurring && historyBills.some((h) => h.name === bill.name) && (
                         <DropdownMenuItem onClick={() => setHistoryBillName(bill.name)}>
                           <History className="mr-2 h-3.5 w-3.5" /> View History
                         </DropdownMenuItem>
@@ -213,7 +302,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
             <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
               <div>
                 <p className="text-sm font-medium">Monthly Recurring</p>
-                <p className="text-xs text-muted-foreground">Auto-generates next month&apos;s bill when paid</p>
+                <p className="text-xs text-muted-foreground">Auto-generates next month&apos;s bill</p>
               </div>
               <button
                 type="button"
@@ -225,6 +314,23 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                 <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${form.isRecurring ? "translate-x-4" : "translate-x-0"}`} />
               </button>
             </div>
+            {form.isRecurring && (
+              <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Variable Amount</p>
+                  <p className="text-xs text-muted-foreground">Bill starts as DRAFT, activate with amount each month</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.isVariable}
+                  onClick={() => setForm((p) => ({ ...p, isVariable: !p.isVariable }))}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${form.isVariable ? "bg-primary" : "bg-input"}`}
+                >
+                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${form.isVariable ? "translate-x-4" : "translate-x-0"}`} />
+                </button>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancel</Button>
@@ -277,6 +383,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
               <Select value={editBill?.status ?? "PENDING"} onValueChange={(v) => setEditBill((p) => p ? { ...p, status: v as BillStatus } : p)}>
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
                   <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="PAID">Paid</SelectItem>
                   <SelectItem value="OVERDUE">Overdue</SelectItem>
@@ -286,7 +393,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
             <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
               <div>
                 <p className="text-sm font-medium">Monthly Recurring</p>
-                <p className="text-xs text-muted-foreground">Auto-generates next month&apos;s bill when paid</p>
+                <p className="text-xs text-muted-foreground">Auto-generates next month&apos;s bill</p>
               </div>
               <button
                 type="button"
@@ -298,6 +405,23 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                 <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${editBill?.isRecurring ? "translate-x-4" : "translate-x-0"}`} />
               </button>
             </div>
+            {editBill?.isRecurring && (
+              <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Variable Amount</p>
+                  <p className="text-xs text-muted-foreground">Bill starts as DRAFT each month</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editBill?.isVariable ?? false}
+                  onClick={() => setEditBill((p) => p ? { ...p, isVariable: !p.isVariable } : p)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${editBill?.isVariable ? "bg-primary" : "bg-input"}`}
+                >
+                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${editBill?.isVariable ? "translate-x-4" : "translate-x-0"}`} />
+                </button>
+              </div>
+            )}
             <div>
               <Label>Notes</Label>
               <Input value={editBill?.notes ?? ""} onChange={(e) => setEditBill((p) => p ? { ...p, notes: e.target.value } : p)} className="mt-1.5" placeholder="Optional" />
@@ -306,6 +430,42 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditBill(null)}>Cancel</Button>
             <Button onClick={handleEditSave} disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activate Draft Bill Dialog */}
+      <Dialog open={!!activateDialog} onOpenChange={(o) => !o && setActivateDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Activate Draft Bill</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Enter the amount for <span className="font-medium text-foreground">{activateDialog?.name}</span> this month to activate the bill.
+              </p>
+            </div>
+            <div>
+              <Label>Amount (₹) *</Label>
+              <Input 
+                type="number" 
+                value={activateAmount} 
+                onChange={(e) => setActivateAmount(e.target.value)} 
+                className="mt-1.5" 
+                placeholder="Enter bill amount"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setActivateDialog(null);
+              setActivateAmount("");
+            }}>Cancel</Button>
+            <Button onClick={handleActivateDraft} disabled={isSubmitting || !activateAmount}>
+              {isSubmitting ? "Activating..." : "Activate Bill"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
