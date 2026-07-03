@@ -213,7 +213,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
             <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
               <div>
                 <p className="text-sm font-medium">Monthly Recurring</p>
-                <p className="text-xs text-muted-foreground">Auto-generates next month's bill when paid</p>
+                <p className="text-xs text-muted-foreground">Auto-generates next month&apos;s bill when paid</p>
               </div>
               <button
                 type="button"
@@ -286,7 +286,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
             <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
               <div>
                 <p className="text-sm font-medium">Monthly Recurring</p>
-                <p className="text-xs text-muted-foreground">Auto-generates next month's bill when paid</p>
+                <p className="text-xs text-muted-foreground">Auto-generates next month&apos;s bill when paid</p>
               </div>
               <button
                 type="button"
