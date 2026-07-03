@@ -3,12 +3,12 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
-  Plus, MoreHorizontal, List, LayoutGrid,
+  Plus, MoreHorizontal,
   Circle, PlayCircle, CheckCircle2, XCircle,
   ChevronRight, Check, Pencil, Trash2, RotateCcw,
+  Search, AlertTriangle, Clock, BarChart2, Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,9 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { formatDate, getPriorityColor } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { createTask, updateTaskStatus, updateTask, deleteTask } from "@/actions/tasks";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/constants";
 import type { Task, TaskStatus, TaskPriority, QuickCapture } from "@/types";
@@ -28,7 +29,7 @@ interface TasksClientProps {
   captures: QuickCapture[];
 }
 
-const STATUS_COLUMNS: TaskStatus[] = ["TODO", "IN_PROGRESS", "COMPLETED"];
+const STATUS_COLUMNS: TaskStatus[] = ["TODO", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
 
 const COLUMN_META: Record<TaskStatus, { icon: React.ElementType; color: string; border: string; borderL: string; badge: string; ring: string; colBg: string; headerBg: string; headerText: string }> = {
   TODO: {
@@ -77,10 +78,16 @@ const COLUMN_META: Record<TaskStatus, { icon: React.ElementType; color: string; 
   },
 };
 
+const PRIORITY_COLORS: Record<string, { dot: string; label: string }> = {
+  URGENT: { dot: "bg-red-500",    label: "text-red-500" },
+  HIGH:   { dot: "bg-orange-400", label: "text-orange-400" },
+  MEDIUM: { dot: "bg-blue-400",   label: "text-blue-400" },
+  LOW:    { dot: "bg-zinc-400",   label: "text-zinc-400" },
+};
+
 const emptyForm = { title: "", description: "", priority: "MEDIUM" as TaskPriority, dueDate: "", tags: "" };
 
 export function TasksClient({ tasks }: TasksClientProps) {
-  const [view, setView] = useState<"kanban" | "list">("kanban");
   const [addDialog, setAddDialog] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -88,13 +95,37 @@ export function TasksClient({ tasks }: TasksClientProps) {
   const [form, setForm] = useState(emptyForm);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null);
+  const [search, setSearch] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+
+  // ── Stats ───────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const now = new Date();
+    const active = tasks.filter(t => t.status !== "CANCELLED");
+    const completed = tasks.filter(t => t.status === "COMPLETED");
+    const inProgress = tasks.filter(t => t.status === "IN_PROGRESS");
+    const urgent = tasks.filter(t => (t.priority === "URGENT" || t.priority === "HIGH") && t.status !== "COMPLETED" && t.status !== "CANCELLED");
+    const overdue = tasks.filter(t => t.dueDate && new Date(t.dueDate) < now && t.status !== "COMPLETED" && t.status !== "CANCELLED");
+    const completionRate = active.length > 0 ? Math.round((completed.length / active.length) * 100) : 0;
+    return { total: tasks.length, completed: completed.length, inProgress: inProgress.length, urgent: urgent.length, overdue: overdue.length, completionRate };
+  }, [tasks]);
+
+  // ── Filtered & grouped ──────────────────────────────────────
+  const filtered = useMemo(() => {
+    return tasks.filter(t => {
+      const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.description ?? "").toLowerCase().includes(search.toLowerCase());
+      const matchPriority = priorityFilter === "ALL" || t.priority === priorityFilter;
+      return matchSearch && matchPriority;
+    });
+  }, [tasks, search, priorityFilter]);
 
   const grouped = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = { TODO: [], IN_PROGRESS: [], COMPLETED: [], CANCELLED: [] };
-    tasks.forEach((t) => map[t.status as TaskStatus]?.push(t));
+    filtered.forEach((t) => map[t.status as TaskStatus]?.push(t));
     return map;
-  }, [tasks]);
+  }, [filtered]);
 
+  // ── Handlers ────────────────────────────────────────────────
   const handleAdd = async () => {
     if (!form.title) { toast.error("Title is required"); return; }
     setIsSubmitting(true);
@@ -138,9 +169,14 @@ export function TasksClient({ tasks }: TasksClientProps) {
     setDeleteId(null);
   };
 
+  // ── Kanban Card ─────────────────────────────────────────────
   const TaskCard = ({ task, status }: { task: Task; status: TaskStatus }) => {
     const meta = COLUMN_META[status];
     const isCompleted = status === "COMPLETED";
+    const isCancelled = status === "CANCELLED";
+    const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !isCompleted && !isCancelled;
+    const priorityStyle = PRIORITY_COLORS[task.priority] ?? PRIORITY_COLORS.MEDIUM;
+
     return (
       <Card
         className={`${meta.border} hover:shadow-sm transition-all cursor-grab active:cursor-grabbing select-none ${
@@ -150,17 +186,11 @@ export function TasksClient({ tasks }: TasksClientProps) {
         onDragStart={(e) => { setDraggedId(task.id); e.dataTransfer.effectAllowed = "move"; }}
         onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
       >
-        <CardContent className="p-3 space-y-2.5">
-          {/* Title row */}
+        <CardContent className="p-3 space-y-2">
+          {/* Priority dot + title + menu */}
           <div className="flex items-start gap-2">
-            <button
-              className={`mt-0.5 shrink-0 ${meta.color} hover:opacity-70 transition-opacity`}
-              onClick={() => handleStatusChange(task.id, isCompleted ? "TODO" : status === "TODO" ? "IN_PROGRESS" : "COMPLETED")}
-              title={isCompleted ? "Mark todo" : status === "TODO" ? "Start" : "Complete"}
-            >
-              {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : status === "TODO" ? <Circle className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
-            </button>
-            <p className={`text-sm font-medium leading-snug flex-1 ${isCompleted ? "line-through text-muted-foreground" : ""}`}>
+            <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${priorityStyle.dot}`} title={TASK_PRIORITY_LABELS[task.priority as TaskPriority]} />
+            <p className={`text-sm font-medium leading-snug flex-1 ${isCompleted || isCancelled ? "line-through text-muted-foreground" : ""}`}>
               {task.title}
             </p>
             <DropdownMenu>
@@ -185,44 +215,59 @@ export function TasksClient({ tasks }: TasksClientProps) {
             </DropdownMenu>
           </div>
 
-          {/* Meta row */}
-          <div className="flex items-center gap-2 flex-wrap pl-6">
-            <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${getPriorityColor(task.priority)}`}>
+          {/* Description preview */}
+          {task.description && (
+            <p className="text-[11px] text-muted-foreground line-clamp-2 pl-4">{task.description}</p>
+          )}
+
+          {/* Due date + priority label */}
+          <div className="flex items-center gap-2 flex-wrap pl-4">
+            <span className={`text-[10px] font-semibold uppercase tracking-wide ${priorityStyle.label}`}>
               {TASK_PRIORITY_LABELS[task.priority as TaskPriority]}
             </span>
             {task.dueDate && (
-              <span className="text-[11px] text-muted-foreground">{formatDate(task.dueDate)}</span>
+              <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${
+                isOverdue ? "bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400" : "text-muted-foreground"
+              }`}>
+                {isOverdue ? "⚠ " : "📅 "}{formatDate(task.dueDate)}
+              </span>
             )}
           </div>
 
+          {/* Tags */}
+          {task.tags && task.tags.length > 0 && (
+            <div className="flex gap-1 flex-wrap pl-4">
+              {task.tags.slice(0, 3).map((tag, i) => (
+                <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">#{tag}</span>
+              ))}
+              {task.tags.length > 3 && <span className="text-[10px] text-muted-foreground">+{task.tags.length - 3}</span>}
+            </div>
+          )}
+
           {/* Quick action buttons */}
-          {!isCompleted && (
-            <div className="flex gap-1.5 pl-6">
+          {!isCompleted && !isCancelled && (
+            <div className="flex gap-1.5 pl-4">
               {status === "TODO" && (
                 <>
-                  <button
-                    onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
-                    className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 font-medium transition-colors"
-                  >
+                  <button onClick={() => handleStatusChange(task.id, "IN_PROGRESS")} className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 font-medium transition-colors">
                     <ChevronRight className="h-3 w-3" /> Start
                   </button>
-                  <button
-                    onClick={() => handleStatusChange(task.id, "COMPLETED")}
-                    className="flex items-center gap-1 text-[11px] text-emerald-500 hover:text-emerald-600 font-medium transition-colors"
-                  >
+                  <button onClick={() => handleStatusChange(task.id, "COMPLETED")} className="flex items-center gap-1 text-[11px] text-emerald-500 hover:text-emerald-600 font-medium transition-colors">
                     <Check className="h-3 w-3" /> Done
                   </button>
                 </>
               )}
               {status === "IN_PROGRESS" && (
-                <button
-                  onClick={() => handleStatusChange(task.id, "COMPLETED")}
-                  className="flex items-center gap-1 text-[11px] text-emerald-500 hover:text-emerald-600 font-medium transition-colors"
-                >
+                <button onClick={() => handleStatusChange(task.id, "COMPLETED")} className="flex items-center gap-1 text-[11px] text-emerald-500 hover:text-emerald-600 font-medium transition-colors">
                   <Check className="h-3 w-3" /> Done
                 </button>
               )}
             </div>
+          )}
+          {isCompleted && (
+            <button onClick={() => handleStatusChange(task.id, "TODO")} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground font-medium transition-colors pl-4">
+              <RotateCcw className="h-3 w-3" /> Reopen
+            </button>
           )}
         </CardContent>
       </Card>
@@ -231,27 +276,84 @@ export function TasksClient({ tasks }: TasksClientProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
-          <Button size="sm" variant={view === "kanban" ? "default" : "ghost"} className="h-7" onClick={() => setView("kanban")}>
-            <LayoutGrid className="h-4 w-4 mr-1.5" /> Kanban
-          </Button>
-          <Button size="sm" variant={view === "list" ? "default" : "ghost"} className="h-7" onClick={() => setView("list")}>
-            <List className="h-4 w-4 mr-1.5" /> List
-          </Button>
+      {/* ── Summary Stats ──────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="col-span-2 md:col-span-2 rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Completion</span>
+            <BarChart2 className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="text-2xl font-bold">{stats.completed}</span>
+            <span className="text-sm text-muted-foreground">/ {stats.total} tasks</span>
+          </div>
+          <Progress value={stats.completionRate} className="h-1.5" />
+          <p className="text-xs text-muted-foreground mt-1">{stats.completionRate}% complete</p>
         </div>
-        <Button size="sm" onClick={() => setAddDialog(true)}>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-1.5 mb-1">
+            <PlayCircle className="h-3.5 w-3.5 text-blue-400" />
+            <span className="text-xs text-muted-foreground">In Progress</span>
+          </div>
+          <span className="text-2xl font-bold text-blue-500">{stats.inProgress}</span>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-1.5 mb-1">
+            <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+            <span className="text-xs text-muted-foreground">Urgent/High</span>
+          </div>
+          <span className={`text-2xl font-bold ${stats.urgent > 0 ? "text-red-500" : "text-foreground"}`}>{stats.urgent}</span>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Clock className="h-3.5 w-3.5 text-orange-400" />
+            <span className="text-xs text-muted-foreground">Overdue</span>
+          </div>
+          <span className={`text-2xl font-bold ${stats.overdue > 0 ? "text-orange-500" : "text-foreground"}`}>{stats.overdue}</span>
+        </div>
+      </div>
+
+      {/* ── Filters + Add ──────────────────────────────────── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tasks..."
+            className="pl-8 h-8 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="h-8 w-[130px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Priorities</SelectItem>
+              <SelectItem value="URGENT">🔴 Urgent</SelectItem>
+              <SelectItem value="HIGH">🟠 High</SelectItem>
+              <SelectItem value="MEDIUM">🔵 Medium</SelectItem>
+              <SelectItem value="LOW">⚪ Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button size="sm" onClick={() => setAddDialog(true)} className="ml-auto">
           <Plus className="h-4 w-4 mr-1.5" /> Add Task
         </Button>
       </div>
 
+      {/* ── Kanban Board ───────────────────────────────────── */}
       {tasks.length === 0 ? (
         <EmptyState icon={Plus} title="No tasks yet" description="Create your first task to get started" action={{ label: "Add Task", onClick: () => setAddDialog(true) }} />
-      ) : view === "kanban" ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {STATUS_COLUMNS.map((status) => {
             const meta = COLUMN_META[status];
             const Icon = meta.icon;
+            const colTasks = grouped[status];
+            const activeCount = status !== "COMPLETED" && status !== "CANCELLED" ? colTasks.length : null;
             return (
               <div
                 key={status}
@@ -275,173 +377,30 @@ export function TasksClient({ tasks }: TasksClientProps) {
                   <Icon className={`h-4 w-4 ${meta.color}`} />
                   <h3 className={`text-sm font-bold tracking-wide ${meta.headerText}`}>{TASK_STATUS_LABELS[status]}</h3>
                   <span className={`ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.badge}`}>
-                    {grouped[status].length}
+                    {colTasks.length}
                   </span>
+                  {activeCount !== null && activeCount > 0 && (
+                    <div className="h-1.5 w-8 rounded-full bg-background/60 overflow-hidden">
+                      <div
+                        className={`h-full ${meta.color.replace("text-", "bg-")}`}
+                        style={{ width: `${Math.min((activeCount / Math.max(tasks.length, 1)) * 100, 100)}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
                 {/* Cards */}
                 <div className="space-y-2 min-h-[80px] p-2">
-                  {grouped[status].length === 0 ? (
+                  {colTasks.length === 0 ? (
                     <div className="border-2 border-dashed border-border/40 rounded-lg h-16 flex items-center justify-center">
-                      <p className="text-xs text-muted-foreground">Empty</p>
+                      <p className="text-xs text-muted-foreground">
+                        {search || priorityFilter !== "ALL" ? "No matches" : "Empty"}
+                      </p>
                     </div>
                   ) : (
-                    grouped[status].map((task) => <TaskCard key={task.id} task={task} status={status} />)
+                    colTasks.map((task) => <TaskCard key={task.id} task={task} status={status} />)
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {tasks.map((task) => {
-            const s = task.status as TaskStatus;
-            const meta = COLUMN_META[s] ?? COLUMN_META.TODO;
-            const Icon = meta.icon;
-            const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && s !== "COMPLETED" && s !== "CANCELLED";
-            const isCompleted = s === "COMPLETED";
-            return (
-              <Card key={task.id} className={`${meta.borderL} hover:shadow-md transition-all group`}>
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4">
-                    {/* Status icon - clickable for quick toggle */}
-                    <button
-                      onClick={() => handleStatusChange(task.id, isCompleted ? "TODO" : s === "TODO" ? "IN_PROGRESS" : "COMPLETED")}
-                      className={`mt-0.5 shrink-0 ${meta.color} hover:opacity-70 transition-all`}
-                      title={isCompleted ? "Reopen" : s === "TODO" ? "Start" : "Complete"}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </button>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* Title */}
-                      <h3 className={`text-base font-semibold mb-1.5 ${
-                        isCompleted ? "line-through text-muted-foreground" : "text-foreground"
-                      }`}>
-                        {task.title}
-                      </h3>
-
-                      {/* Description preview */}
-                      {task.description && (
-                        <p className={`text-sm mb-3 line-clamp-2 ${
-                          isCompleted ? "text-muted-foreground/70" : "text-muted-foreground"
-                        }`}>
-                          {task.description}
-                        </p>
-                      )}
-
-                      {/* Meta row */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {/* Status badge */}
-                        <Badge variant="outline" className={`text-xs font-medium ${meta.badge} border-0`}>
-                          {TASK_STATUS_LABELS[s]}
-                        </Badge>
-
-                        {/* Priority */}
-                        <Badge variant="outline" className={`text-xs font-medium ${getPriorityColor(task.priority)} border-0`}>
-                          {TASK_PRIORITY_LABELS[task.priority as TaskPriority]}
-                        </Badge>
-
-                        {/* Due date */}
-                        {task.dueDate && (
-                          <span className={`text-xs font-medium px-2 py-1 rounded-md ${
-                            isOverdue 
-                              ? "bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400" 
-                              : "bg-muted text-muted-foreground"
-                          }`}>
-                            {isOverdue ? "⚠️ Overdue: " : "📅 "}{formatDate(task.dueDate)}
-                          </span>
-                        )}
-
-                        {/* Tags */}
-                        {task.tags && task.tags.length > 0 && (
-                          <div className="flex gap-1.5 flex-wrap">
-                            {task.tags.slice(0, 3).map((tag, idx) => (
-                              <span
-                                key={idx}
-                                className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                            {task.tags.length > 3 && (
-                              <span className="text-xs text-muted-foreground">+{task.tags.length - 3}</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions - show on hover */}
-                    <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {/* Status transition */}
-                      {s === "TODO" && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
-                            onClick={() => handleStatusChange(task.id, "IN_PROGRESS")}
-                          >
-                            <ChevronRight className="h-4 w-4" /> Start
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
-                            onClick={() => handleStatusChange(task.id, "COMPLETED")}
-                          >
-                            <Check className="h-4 w-4" /> Done
-                          </Button>
-                        </>
-                      )}
-                      {s === "IN_PROGRESS" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
-                          onClick={() => handleStatusChange(task.id, "COMPLETED")}
-                        >
-                          <Check className="h-4 w-4" /> Complete
-                        </Button>
-                      )}
-                      {s === "COMPLETED" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 text-xs gap-1.5"
-                          onClick={() => handleStatusChange(task.id, "TODO")}
-                        >
-                          <RotateCcw className="h-4 w-4" /> Reopen
-                        </Button>
-                      )}
-
-                      {/* Edit */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-muted"
-                        onClick={() => setEditTask(task)}
-                        title="Edit task"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-
-                      {/* Delete */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setDeleteId(task.id)}
-                        title="Delete task"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             );
           })}
         </div>
@@ -506,7 +465,7 @@ export function TasksClient({ tasks }: TasksClientProps) {
                 <Select value={editTask?.status ?? "TODO"} onValueChange={(v) => setEditTask((p) => p ? { ...p, status: v as TaskStatus } : p)}>
                   <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(TASK_STATUS_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                    {Object.entries(TASK_STATUS_LABELS).filter(([v]) => ["TODO","IN_PROGRESS","COMPLETED","CANCELLED"].includes(v)).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

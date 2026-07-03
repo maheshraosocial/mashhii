@@ -22,7 +22,7 @@ export default async function TasksPage() {
     <div className="space-y-6">
       <PageHeader
         title="Tasks"
-        description="Manage your tasks with kanban and list views"
+        description="Track and manage your work with the Kanban board"
         icon={CheckSquare}
         iconColor="text-violet-400"
       />

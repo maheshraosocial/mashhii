@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, CheckCircle2, AlertCircle, Clock, MoreHorizontal } from "lucide-react";
+import { Plus, CheckCircle2, AlertCircle, Clock, MoreHorizontal, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { StatsCard } from "@/components/shared/stats-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatCurrency, formatDate, getBillStatusColor } from "@/lib/utils";
@@ -34,6 +35,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", category: "OTHER" as BillCategory, amount: "", dueDate: "", isRecurring: false, notes: "" });
   const [editBill, setEditBill] = useState<{ id: string; name: string; category: BillCategory; amount: string; dueDate: string; isRecurring: boolean; notes: string; status: BillStatus } | null>(null);
+  const [historyBillName, setHistoryBillName] = useState<string | null>(null);
 
   const handleAdd = async () => {
     if (!form.name || !form.dueDate) { toast.error("Name and due date are required"); return; }
@@ -76,6 +78,17 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
     if (result.success) { toast.success("Bill updated"); setEditBill(null); }
     else toast.error(result.error);
   };
+
+  // History: all PAID records matching the selected bill name
+  const historyRecords = historyBillName
+    ? bills
+        .filter((b) => b.status === "PAID" && b.name === historyBillName)
+        .sort((a, b) => {
+          const da = a.paidDate ? new Date(a.paidDate).getTime() : 0;
+          const db_ = b.paidDate ? new Date(b.paidDate).getTime() : 0;
+          return db_ - da;
+        })
+    : [];
 
   return (
     <>
@@ -130,6 +143,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                     <p className="text-xs text-muted-foreground">
                       {BILL_CATEGORY_LABELS[bill.category]} · Due {formatDate(bill.dueDate)}
                       {bill.isRecurring && " · Recurring"}
+                      {bill.status === "PAID" && bill.paidDate && ` · Paid ${formatDate(bill.paidDate)}`}
                     </p>
                   </div>
                 </div>
@@ -153,6 +167,11 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditBill({ id: bill.id, name: bill.name, category: bill.category as BillCategory, amount: bill.amount ? bill.amount.toString() : "", dueDate: new Date(bill.dueDate).toISOString().split("T")[0], isRecurring: bill.isRecurring, notes: bill.notes ?? "", status: bill.status as BillStatus })}>Edit</DropdownMenuItem>
+                      {bill.status === "PAID" && (
+                        <DropdownMenuItem onClick={() => setHistoryBillName(bill.name)}>
+                          <History className="mr-2 h-3.5 w-3.5" /> View History
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(bill.id)}>Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -190,6 +209,21 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
             <div>
               <Label>Due Date *</Label>
               <Input type="date" value={form.dueDate} onChange={(e) => setForm((p) => ({ ...p, dueDate: e.target.value }))} className="mt-1.5" />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Monthly Recurring</p>
+                <p className="text-xs text-muted-foreground">Auto-generates next month's bill when paid</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.isRecurring}
+                onClick={() => setForm((p) => ({ ...p, isRecurring: !p.isRecurring }))}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${form.isRecurring ? "bg-primary" : "bg-input"}`}
+              >
+                <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${form.isRecurring ? "translate-x-4" : "translate-x-0"}`} />
+              </button>
             </div>
           </div>
           <DialogFooter>
@@ -252,7 +286,7 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
             <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
               <div>
                 <p className="text-sm font-medium">Monthly Recurring</p>
-                <p className="text-xs text-muted-foreground">Repeats every month automatically</p>
+                <p className="text-xs text-muted-foreground">Auto-generates next month's bill when paid</p>
               </div>
               <button
                 type="button"
@@ -275,6 +309,52 @@ export function BillsClient({ bills, stats }: BillsClientProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment History Sheet */}
+      <Sheet open={!!historyBillName} onOpenChange={(o) => !o && setHistoryBillName(null)}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <History className="h-4 w-4 text-primary" />
+              Payment History — {historyBillName}
+            </SheetTitle>
+          </SheetHeader>
+          {historyRecords.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No payment records found.</p>
+          ) : (
+            <div className="space-y-3">
+              {historyRecords.map((record) => (
+                <Card key={record.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">
+                          Due: {formatDate(record.dueDate)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Paid: {record.paidDate ? formatDate(record.paidDate) : "—"}
+                        </p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        {(record.paidAmount ?? record.amount) && (
+                          <p className="text-sm font-semibold tabular-nums">
+                            {formatCurrency(parseFloat((record.paidAmount ?? record.amount)!.toString()))}
+                          </p>
+                        )}
+                        <Badge variant="success" className="text-xs">Paid</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              <p className="text-xs text-muted-foreground text-center pt-2">
+                {historyRecords.length} payment{historyRecords.length !== 1 ? "s" : ""} recorded
+              </p>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
+

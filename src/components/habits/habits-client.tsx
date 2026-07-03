@@ -63,7 +63,6 @@ import {
   format,
   startOfDay,
   subDays,
-  eachDayOfInterval,
   isSameDay,
   differenceInDays,
 } from "date-fns";
@@ -408,12 +407,17 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
 
   const calendarData = useMemo(() => {
     const now = new Date();
-    const end = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-    const start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-    const days = eachDayOfInterval({ start, end });
+    // Use UTC timestamps to match database storage (@db.Date stored as UTC midnight)
+    const endMs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const startMs = Date.UTC(now.getFullYear(), now.getMonth(), 1);
+
+    const days: Date[] = [];
+    for (let t = startMs; t <= endMs; t += 86400000) {
+      days.push(new Date(t));
+    }
 
     return days.map(day => {
-      const dayTime = day.getTime();
+      const dayTime = day.getTime(); // UTC midnight — matches DB storage
       const completed = enrichedHabits.filter(h =>
         h.entries.some(e => new Date(e.date).getTime() === dayTime && e.completed)
       ).length;

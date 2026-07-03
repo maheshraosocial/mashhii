@@ -34,7 +34,7 @@ export function DocumentsClient({ documents, properties }: DocumentsClientProps)
   const [uploadDialog, setUploadDialog] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", category: "OTHER" as DocumentCategory, propertyId: "", expiryDate: "" });
+  const [form, setForm] = useState({ name: "", category: "OTHER" as DocumentCategory, propertyId: "__none__", expiryDate: "" });
   const [file, setFile] = useState<File | null>(null);
 
   const filtered = documents.filter(
@@ -50,14 +50,14 @@ export function DocumentsClient({ documents, properties }: DocumentsClientProps)
     fd.append("file", file);
     fd.append("name", form.name);
     fd.append("category", form.category);
-    if (form.propertyId) fd.append("propertyId", form.propertyId);
+    if (form.propertyId && form.propertyId !== "__none__") fd.append("propertyId", form.propertyId);
     if (form.expiryDate) fd.append("expiryDate", form.expiryDate);
     const result = await uploadDocument(fd);
     setIsSubmitting(false);
     if (result.success) {
       toast.success("Document uploaded");
       setUploadDialog(false);
-      setForm({ name: "", category: "OTHER", propertyId: "", expiryDate: "" });
+      setForm({ name: "", category: "OTHER", propertyId: "__none__", expiryDate: "" });
       setFile(null);
     } else toast.error(result.error);
   };
@@ -149,7 +149,7 @@ export function DocumentsClient({ documents, properties }: DocumentsClientProps)
               <Select value={form.propertyId} onValueChange={(v) => setForm((p) => ({ ...p, propertyId: v }))}>
                 <SelectTrigger className="mt-1.5"><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
