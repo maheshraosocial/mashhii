@@ -76,9 +76,15 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
     }
     setIsSubmitting(true);
     const result = await createBill({ 
-      ...form, 
+      name: form.name,
+      category: form.category,
       amount: form.amount ? parseFloat(form.amount) : undefined,
-      recurrence: form.isRecurring ? "MONTHLY" : undefined,
+      dueDate: new Date(form.dueDate),
+      isRecurring: form.isRecurring,
+      isVariable: form.isVariable,
+      recurrence: form.isRecurring ? "MONTHLY" : "NONE",
+      status: form.isRecurring && form.isVariable ? "DRAFT" : "PENDING",
+      notes: form.notes || undefined,
     });
     setIsSubmitting(false);
     if (result.success) {
@@ -141,13 +147,19 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
 
   // History: all records from historyBills matching the selected bill name
   const historyRecords = historyBillName
-    ? historyBills
-        .filter((b) => b.name === historyBillName)
-        .sort((a, b) => {
+    ? historyBillName === "__ALL__"
+      ? historyBills.sort((a, b) => {
           const da = a.paidDate ? new Date(a.paidDate).getTime() : 0;
           const db_ = b.paidDate ? new Date(b.paidDate).getTime() : 0;
           return db_ - da;
         })
+      : historyBills
+          .filter((b) => b.name === historyBillName)
+          .sort((a, b) => {
+            const da = a.paidDate ? new Date(a.paidDate).getTime() : 0;
+            const db_ = b.paidDate ? new Date(b.paidDate).getTime() : 0;
+            return db_ - da;
+          })
     : [];
 
   return (
@@ -184,10 +196,17 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Bills ({bills.length})</h2>
-        <Button size="sm" onClick={() => setAddDialog(true)}>
-          <Plus className="h-4 w-4 mr-1.5" /> Add Bill
-        </Button>
+        <h2 className="text-sm font-semibold">Active Bills ({bills.length})</h2>
+        <div className="flex items-center gap-2">
+          {historyBills.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setHistoryBillName("__ALL__")}>
+              <History className="h-4 w-4 mr-1.5" /> View All History
+            </Button>
+          )}
+          <Button size="sm" onClick={() => setAddDialog(true)}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add Bill
+          </Button>
+        </div>
       </div>
 
       {bills.length === 0 ? (
@@ -476,7 +495,7 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
           <SheetHeader className="pb-4">
             <SheetTitle className="flex items-center gap-2">
               <History className="h-4 w-4 text-primary" />
-              Payment History — {historyBillName}
+              {historyBillName === "__ALL__" ? "All Payment History" : `Payment History — ${historyBillName}`}
             </SheetTitle>
           </SheetHeader>
           {historyRecords.length === 0 ? (
@@ -488,6 +507,11 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
+                        {historyBillName === "__ALL__" && (
+                          <p className="text-sm font-semibold">
+                            {record.name}
+                          </p>
+                        )}
                         <p className="text-sm font-medium">
                           Due: {formatDate(record.dueDate)}
                         </p>
