@@ -13,10 +13,21 @@ async function requireAuth() {
   if (!session) redirect("/login");
 }
 
+// Cache cleanup to run once per day
+let lastCleanupDate: string | null = null;
+
 /**
- * Auto-cleanup: Delete completed tasks older than 7 days
+ * Auto-cleanup: Delete completed tasks older than 7 days (cached - runs once per day)
  */
 export async function cleanupOldTasks(): Promise<void> {
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  
+  // Skip if already ran today (performance optimization)
+  if (lastCleanupDate === todayKey) {
+    return;
+  }
+
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -28,6 +39,8 @@ export async function cleanupOldTasks(): Promise<void> {
       },
     },
   });
+  
+  lastCleanupDate = todayKey;
 }
 
 export async function createTask(data: unknown): Promise<ActionResultVoid> {

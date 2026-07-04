@@ -132,8 +132,18 @@ export async function updateTenant(id: string, propertyId: string, data: unknown
  * current month. OTHER properties are included for payment tracking but excluded
  * from financial stats/calculations.
  */
+// Cache payment generation to run once per day
+let lastPaymentGenerationDate: string | null = null;
+
 export async function ensureCurrentMonthPayments(): Promise<void> {
   const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  
+  // Skip if already ran today (performance optimization)
+  if (lastPaymentGenerationDate === todayKey) {
+    return;
+  }
+
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
@@ -141,14 +151,21 @@ export async function ensureCurrentMonthPayments(): Promise<void> {
     include: { tenant: true },
   });
 
-  for (const property of properties) {
+  // Early exit if no properties
+  if (properties.length === 0) {
+    lastPaymentGenerationDate = todayKey;
+    return;
+  }
+
+  // Batch upsert operations for better performance
+  const operations = properties.map(property => {
     const dueDay = property.tenant?.dueDate ?? 1;
     const dueDate = new Date(year, month - 1, dueDay);
     const amount = property.monthlyRent;
 
-    await db.rentPayment.upsert({
+    return db.rentPayment.upsert({
       where: { propertyId_month_year: { propertyId: property.id, month, year } },
-      update: {},   // never overwrite an existing record
+      update: {},
       create: {
         propertyId: property.id,
         tenantId: property.tenant?.id ?? null,
@@ -159,7 +176,12 @@ export async function ensureCurrentMonthPayments(): Promise<void> {
         status: PaymentStatus.PENDING,
       },
     });
-  }
+  });
+
+  // Execute all operations in parallel for better performance
+  await Promise.all(operations);
+  
+  lastPaymentGenerationDate = todayKey;
 }
 
 /** One-click: immediately mark this month's rent as paid (no dialog). */

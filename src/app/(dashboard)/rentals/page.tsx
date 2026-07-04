@@ -4,8 +4,11 @@ import { PageHeader } from "@/components/shared/page-header";
 import { RentalsClient } from "@/components/rentals/rentals-client";
 import { ensureCurrentMonthPayments } from "@/actions/rentals";
 
+// Enable Next.js data cache with revalidation
+export const revalidate = 60; // Revalidate every 60 seconds
+
 export default async function RentalsPage() {
-  // Auto-create this month's payment records for all tenanted properties
+  // Auto-create this month's payment records (cached)
   await ensureCurrentMonthPayments();
 
   const now = new Date();

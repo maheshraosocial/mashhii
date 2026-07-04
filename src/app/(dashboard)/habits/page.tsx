@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { HabitsClient } from "@/components/habits/habits-client";
 import { startOfMonth, startOfDay } from "date-fns";
 
-export const revalidate = 0; // Force dynamic rendering
+// Enable caching with short revalidation for better performance
+export const revalidate = 30; // Revalidate every 30 seconds
 
 export default async function HabitsPage() {
   // Fetch entries from the start of current month

@@ -4,31 +4,51 @@ import { PageHeader } from "@/components/shared/page-header";
 import { BillsClient } from "@/components/bills/bills-client";
 import { generateRecurringBills } from "@/actions/bills";
 
+// Enable Next.js data cache with revalidation
+export const revalidate = 60; // Revalidate every 60 seconds
+
 export default async function BillsPage() {
-  // Generate recurring bills for current month before fetching
+  // Generate recurring bills for current month (cached - only runs once per day)
   await generateRecurringBills();
 
   const bills = await db.bill.findMany({
     orderBy: [{ status: "asc" }, { dueDate: "asc" }],
   });
 
-  // Active bills: DRAFT, PENDING, OVERDUE (current month bills)
-  const activeBills = bills.filter((b) => 
-    b.status === "DRAFT" || b.status === "PENDING" || b.status === "OVERDUE"
-  );
+  // Optimize: Single pass through bills array to categorize and calculate totals
+  const draftBills: typeof bills = [];
+  const pendingBills: typeof bills = [];
+  const overdueBills: typeof bills = [];
+  const historyBills: typeof bills = [];
+  
+  let totalDraft = 0;
+  let totalPending = 0;
+  let totalOverdue = 0;
+  let totalPaid = 0;
 
-  // Split active bills by status
-  const draftBills = activeBills.filter((b) => b.status === "DRAFT");
-  const pendingBills = activeBills.filter((b) => b.status === "PENDING");
-  const overdueBills = activeBills.filter((b) => b.status === "OVERDUE");
+  // Single iteration instead of multiple filters
+  for (const bill of bills) {
+    switch (bill.status) {
+      case "DRAFT":
+        draftBills.push(bill);
+        totalDraft += bill.amount ? parseFloat(bill.amount.toString()) : 0;
+        break;
+      case "PENDING":
+        pendingBills.push(bill);
+        totalPending += bill.amount ? parseFloat(bill.amount.toString()) : 0;
+        break;
+      case "OVERDUE":
+        overdueBills.push(bill);
+        totalOverdue += bill.amount ? parseFloat(bill.amount.toString()) : 0;
+        break;
+      case "PAID":
+        historyBills.push(bill);
+        totalPaid += bill.paidAmount ? parseFloat(bill.paidAmount.toString()) : 0;
+        break;
+    }
+  }
 
-  // History bills: All PAID bills (previous months)
-  const historyBills = bills.filter((b) => b.status === "PAID");
-
-  const totalDraft = draftBills.reduce((s, b) => s + (b.amount ? parseFloat(b.amount.toString()) : 0), 0);
-  const totalPending = pendingBills.reduce((s, b) => s + (b.amount ? parseFloat(b.amount.toString()) : 0), 0);
-  const totalOverdue = overdueBills.reduce((s, b) => s + (b.amount ? parseFloat(b.amount.toString()) : 0), 0);
-  const totalPaid = historyBills.reduce((s, b) => s + (b.paidAmount ? parseFloat(b.paidAmount.toString()) : 0), 0);
+  const activeBills = [...draftBills, ...pendingBills, ...overdueBills];
 
   const stats = {
     draft: draftBills.length,

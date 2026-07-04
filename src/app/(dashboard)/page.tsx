@@ -20,6 +20,9 @@ import { StatsCard } from "@/components/shared/stats-card";
 import { InboxWidget } from "@/components/dashboard/inbox-widget";
 import { formatCurrency, formatDate, getMonthYear, safeDecimalToNumber } from "@/lib/utils";
 
+// Enable Next.js data cache with revalidation for better performance
+export const revalidate = 30; // Revalidate every 30 seconds
+
 export default async function DashboardPage() {
   const session = await auth();
 
@@ -108,21 +111,40 @@ export default async function DashboardPage() {
 
   // ── Derived stats ────────────────────────────────────────────
 
-  // Tasks
+  // Tasks - optimized single pass
   const today = todayStart;
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const tasksDueToday = tasks.filter(
-    (t) => t.dueDate && t.dueDate >= today && t.dueDate < tomorrow
-  ).length;
-  const urgentTasks = tasks.filter((t) => t.priority === "URGENT" || t.priority === "HIGH").length;
+  
+  let tasksDueToday = 0;
+  let urgentTasks = 0;
+  for (const task of tasks) {
+    if (task.dueDate && task.dueDate >= today && task.dueDate < tomorrow) {
+      tasksDueToday++;
+    }
+    if (task.priority === "URGENT" || task.priority === "HIGH") {
+      urgentTasks++;
+    }
+  }
 
-  // Habits — enhanced with streak tracking
+  // Habits — optimized streak tracking (pre-group entries by habitId)
+  const entriesByHabitId = new Map<string, typeof habitEntries>();
+  for (const entry of habitEntries) {
+    if (entry.completed) {
+      const existing = entriesByHabitId.get(entry.habitId) || [];
+      existing.push(entry);
+      entriesByHabitId.set(entry.habitId, existing);
+    }
+  }
+  
   const habitsWithEnriched = habits.map(habit => {
-    const entries = habitEntries.filter(e => e.habitId === habit.id && e.completed);
+    const entries = entriesByHabitId.get(habit.id) || [];
     
     // Calculate current streak using UTC dates
-    const completedDates = entries.map(e => new Date(e.date).getTime()).sort((a, b) => b - a);
+    const completedDates = entries
+      .map(e => new Date(e.date).getTime())
+      .sort((a, b) => b - a);
+    
     let currentStreak = 0;
     let checkDate = todayStart.getTime();
     

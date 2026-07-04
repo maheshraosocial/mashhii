@@ -4,8 +4,11 @@ import { PageHeader } from "@/components/shared/page-header";
 import { TasksClient } from "@/components/tasks/tasks-client";
 import { cleanupOldTasks } from "@/actions/tasks";
 
+// Enable Next.js data cache with revalidation
+export const revalidate = 60; // Revalidate every 60 seconds
+
 export default async function TasksPage() {
-  // Auto-cleanup completed tasks older than 7 days
+  // Auto-cleanup completed tasks older than 7 days (cached)
   await cleanupOldTasks();
 
   const [tasks, captures] = await Promise.all([

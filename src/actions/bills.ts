@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { billSchema } from "@/lib/validations/bill";
 import type { ActionResultVoid } from "@/types";
-import { BillStatus, RecurrenceType } from "@prisma/client";
+import { BillStatus, RecurrenceType, Prisma } from "@prisma/client";
 import { startOfMonth, endOfMonth, isBefore } from "date-fns";
 
 async function requireAuth() {
@@ -35,8 +35,11 @@ function calculateNextDueDate(dueDate: Date, recurrence: RecurrenceType): Date {
   return next;
 }
 
+// In-memory cache for bill generation (keyed by date string YYYY-MM-DD)
+let lastGenerationDate: string | null = null;
+
 /**
- * Generate recurring bills for the current month
+ * Generate recurring bills for the current month (cached - runs once per day)
  * - Creates next month's bill if it doesn't exist yet
  * - For Fixed bills: creates PENDING bill with same amount
  * - For Variable bills: creates DRAFT bill (user must activate with amount)
@@ -46,6 +49,13 @@ export async function generateRecurringBills(): Promise<void> {
   await requireAuth();
 
   const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  
+  // Skip if already ran today (performance optimization)
+  if (lastGenerationDate === todayKey) {
+    return;
+  }
+
   const currentMonthStart = startOfMonth(now);
   const currentMonthEnd = endOfMonth(now);
 
@@ -58,12 +68,22 @@ export async function generateRecurringBills(): Promise<void> {
     orderBy: { name: 'asc' },
   });
 
+  // Early exit if no recurring bills
+  if (recurringBills.length === 0) {
+    lastGenerationDate = todayKey;
+    return;
+  }
+
   // Group bills by name to find the latest instance of each recurring bill
   const billsByName = new Map<string, typeof recurringBills>();
   recurringBills.forEach(bill => {
     const existing = billsByName.get(bill.name) || [];
     billsByName.set(bill.name, [...existing, bill]);
   });
+
+  // Batch operations for better performance
+  const billsToCreate: Array<Prisma.BillCreateInput> = [];
+  const billsToUpdate: Array<{ id: string; status: BillStatus }> = [];
 
   for (const [, bills] of billsByName.entries()) {
     // Sort by dueDate descending to get the latest
@@ -76,39 +96,45 @@ export async function generateRecurringBills(): Promise<void> {
       return billDate >= currentMonthStart && billDate <= currentMonthEnd;
     });
 
-    // If no bill exists for this month, create one
+    // If no bill exists for this month, prepare to create one
     if (!existingThisMonth) {
-      // Calculate next due date from the latest bill
       const nextDueDate = calculateNextDueDate(latestBill.dueDate, RecurrenceType.MONTHLY);
 
-      // Only create if next due date falls in current month or future
       if (nextDueDate >= currentMonthStart) {
-        await db.bill.create({
-          data: {
-            name: latestBill.name,
-            category: latestBill.category,
-            amount: latestBill.isVariable ? 0 : latestBill.amount, // Variable bills start at 0
-            dueDate: nextDueDate,
-            isRecurring: true,
-            recurrence: RecurrenceType.MONTHLY,
-            isVariable: latestBill.isVariable,
-            notes: latestBill.notes,
-            status: latestBill.isVariable ? BillStatus.DRAFT : BillStatus.PENDING,
-          },
+        billsToCreate.push({
+          name: latestBill.name,
+          category: latestBill.category,
+          amount: latestBill.isVariable ? 0 : latestBill.amount,
+          dueDate: nextDueDate,
+          isRecurring: true,
+          recurrence: RecurrenceType.MONTHLY,
+          isVariable: latestBill.isVariable,
+          notes: latestBill.notes,
+          status: latestBill.isVariable ? BillStatus.DRAFT : BillStatus.PENDING,
         });
       }
     }
 
-    // Convert old PENDING bills to OVERDUE if past due date
+    // Collect PENDING bills that need to become OVERDUE
     for (const bill of bills) {
       if (bill.status === BillStatus.PENDING && isBefore(bill.dueDate, now)) {
-        await db.bill.update({
-          where: { id: bill.id },
-          data: { status: BillStatus.OVERDUE },
-        });
+        billsToUpdate.push({ id: bill.id, status: BillStatus.OVERDUE });
       }
     }
   }
+
+  // Batch execute all operations in a transaction for better performance
+  if (billsToCreate.length > 0 || billsToUpdate.length > 0) {
+    await db.$transaction([
+      ...billsToCreate.map(data => db.bill.create({ data })),
+      ...billsToUpdate.map(({ id, status }) => 
+        db.bill.update({ where: { id }, data: { status } })
+      ),
+    ]);
+  }
+
+  // Mark as completed for today
+  lastGenerationDate = todayKey;
 }
 
 export async function createBill(data: unknown): Promise<ActionResultVoid> {
