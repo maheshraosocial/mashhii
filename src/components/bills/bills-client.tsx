@@ -66,6 +66,7 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
   const [historyBillName, setHistoryBillName] = useState<string | null>(null);
   const [activateDialog, setActivateDialog] = useState<{ id: string; name: string } | null>(null);
   const [activateAmount, setActivateAmount] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"PENDING" | "PAID" | "ALL">("PENDING");
 
   const handleAdd = async () => {
     if (!form.name || !form.dueDate) { toast.error("Name and due date are required"); return; }
@@ -145,6 +146,14 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
     else toast.error(result.error);
   };
 
+  // Filtered bill list based on selected status filter
+  const filteredBills =
+    statusFilter === "PAID"
+      ? historyBills
+      : statusFilter === "ALL"
+      ? [...bills, ...historyBills]
+      : bills; // "PENDING" = active (DRAFT, PENDING, OVERDUE)
+
   // History: all records from historyBills matching the selected bill name
   const historyRecords = historyBillName
     ? historyBillName === "__ALL__"
@@ -196,24 +205,41 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Active Bills ({bills.length})</h2>
+        <h2 className="text-sm font-semibold">
+          {statusFilter === "PAID" ? "Paid Bills" : statusFilter === "ALL" ? "All Bills" : "Active Bills"}
+          {" "}({filteredBills.length})
+        </h2>
         <div className="flex items-center gap-2">
-          {historyBills.length > 0 && (
-            <Button size="sm" variant="outline" onClick={() => setHistoryBillName("__ALL__")}>
-              <History className="h-4 w-4 mr-1.5" /> View All History
-            </Button>
-          )}
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "PENDING" | "PAID" | "ALL")}>
+            <SelectTrigger className="h-8 w-32 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PENDING">Pending</SelectItem>
+              <SelectItem value="PAID">Paid</SelectItem>
+              <SelectItem value="ALL">All</SelectItem>
+            </SelectContent>
+          </Select>
           <Button size="sm" onClick={() => setAddDialog(true)}>
             <Plus className="h-4 w-4 mr-1.5" /> Add Bill
           </Button>
         </div>
       </div>
 
-      {bills.length === 0 ? (
-        <EmptyState icon={CheckCircle2} title="No bills yet" description="Add bills to track payment status" action={{ label: "Add Bill", onClick: () => setAddDialog(true) }} />
+      {filteredBills.length === 0 ? (
+        <EmptyState
+          icon={statusFilter === "PAID" ? CheckCircle2 : Clock}
+          title={statusFilter === "PAID" ? "No paid bills yet" : "No bills yet"}
+          description={
+            statusFilter === "PAID"
+              ? "Bills you mark as paid will appear here"
+              : "Add bills to track payment status"
+          }
+          action={statusFilter !== "PAID" ? { label: "Add Bill", onClick: () => setAddDialog(true) } : undefined}
+        />
       ) : (
         <div className="space-y-2">
-          {bills.map((bill) => (
+          {filteredBills.map((bill) => (
             <Card key={bill.id} className="hover:border-primary/50 transition-colors">
               <CardContent className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
