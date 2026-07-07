@@ -356,6 +356,15 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
         .filter(e => e.completed)
         .sort((a, b) => b.date.getTime() - a.date.getTime())[0]?.date;
 
+      const now = new Date();
+      const monthStart = Date.UTC(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      const monthlyProgress: { day: Date; completed: boolean }[] = [];
+      for (let t = monthStart; t <= monthEnd; t += 86400000) {
+        const completed = habit.entries.some(e => new Date(e.date).getTime() === t && e.completed);
+        monthlyProgress.push({ day: new Date(t), completed });
+      }
+
       return {
         ...habit,
         currentStreak,
@@ -363,6 +372,7 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
         isCompletedToday,
         lastCompleted,
         milestone: getStreakMilestone(currentStreak),
+        monthlyProgress,
       };
     });
   }, [habits, today]);
@@ -407,7 +417,6 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
 
   const calendarData = useMemo(() => {
     const now = new Date();
-    // Use UTC timestamps to match database storage (@db.Date stored as UTC midnight)
     const endMs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
     const startMs = Date.UTC(now.getFullYear(), now.getMonth(), 1);
 
@@ -417,7 +426,7 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
     }
 
     return days.map(day => {
-      const dayTime = day.getTime(); // UTC midnight — matches DB storage
+      const dayTime = day.getTime();
       const completed = enrichedHabits.filter(h =>
         h.entries.some(e => new Date(e.date).getTime() === dayTime && e.completed)
       ).length;
@@ -611,9 +620,26 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
                   </div>
                 </div>
 
-                {/* Progress Bar */}
+                {/* Monthly Progress */}
                 <div>
-                  <Progress value={habit.completionRate} className="h-1.5" />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-muted-foreground">This month</span>
+                    <span className="text-xs font-medium">
+                      {habit.monthlyProgress.filter(d => d.completed).length}/{habit.monthlyProgress.length} days
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-0.5">
+                    {habit.monthlyProgress.map((d, i) => (
+                      <div
+                        key={i}
+                        className="h-2.5 w-2.5 rounded-sm"
+                        style={{
+                          backgroundColor: d.completed ? habit.color : `${habit.color}30`,
+                        }}
+                        title={`${format(d.day, "MMM d")}: ${d.completed ? "Done" : "Not done"}`}
+                      />
+                    ))}
+                  </div>
                 </div>
 
                 {/* Milestone Badge */}
