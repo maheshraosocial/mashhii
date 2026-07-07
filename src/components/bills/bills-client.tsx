@@ -67,6 +67,8 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
   const [activateDialog, setActivateDialog] = useState<{ id: string; name: string } | null>(null);
   const [activateAmount, setActivateAmount] = useState("");
   const [statusFilter, setStatusFilter] = useState<"PENDING" | "PAID" | "ALL">("PENDING");
+  const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const [monthFilter, setMonthFilter] = useState<string>(currentMonthKey);
 
   const handleAdd = async () => {
     if (!form.name || !form.dueDate) { toast.error("Name and due date are required"); return; }
@@ -146,13 +148,33 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
     else toast.error(result.error);
   };
 
-  // Filtered bill list based on selected status filter
-  const filteredBills =
+  // All months present across active + paid bills (for the month filter dropdown)
+  const availableMonths = (() => {
+    const allBills = [...bills, ...historyBills];
+    const seen = new Set<string>();
+    for (const b of allBills) {
+      const d = new Date(b.dueDate);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      seen.add(key);
+    }
+    return Array.from(seen).sort((a, b) => b.localeCompare(a)); // newest first
+  })();
+
+  // Filtered bill list based on selected status + month filters
+  const statusFiltered =
     statusFilter === "PAID"
       ? historyBills
       : statusFilter === "ALL"
       ? [...bills, ...historyBills]
       : bills; // "PENDING" = active (DRAFT, PENDING, OVERDUE)
+
+  const filteredBills = monthFilter === "ALL"
+    ? statusFiltered
+    : statusFiltered.filter((b) => {
+        const d = new Date(b.dueDate);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        return key === monthFilter;
+      });
 
   // History: all records from historyBills matching the selected bill name
   const historyRecords = historyBillName
@@ -210,6 +232,19 @@ export function BillsClient({ bills, historyBills, stats }: BillsClientProps) {
           {" "}({filteredBills.length})
         </h2>
         <div className="flex items-center gap-2">
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="h-8 w-36 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Months</SelectItem>
+              {availableMonths.map((key) => {
+                const [year, month] = key.split("-");
+                const label = new Date(Number(year), Number(month) - 1, 1).toLocaleString("default", { month: "long", year: "numeric" });
+                return <SelectItem key={key} value={key}>{label}</SelectItem>;
+              })}
+            </SelectContent>
+          </Select>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "PENDING" | "PAID" | "ALL")}>
             <SelectTrigger className="h-8 w-32 text-xs">
               <SelectValue />
